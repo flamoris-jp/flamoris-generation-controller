@@ -17,7 +17,7 @@ This is a domain-level classification derived from current Generation documentat
 | Managed inputs/references, provider staging, generated assets and bounded transfer | Extract domain behavior; preserve Studio ownership checks and MCP presentation separately |
 | Generation verification/attestation checks | Preserve generation-domain semantics; audit relocation without discarding safeguards |
 | GPU/service lifecycle and runtime fact collection | Leave with GPU Node Manager/provider/deployment owners |
-| Native inference and ExecutionPlan machinery | Leave with AI Runtime; not part of this extraction |
+| Native inference and ExecuteFlow machinery | Leave with AI Runtime; not part of this extraction |
 | v3 includes, composition, Runtime-delegation proposals and new provider expansion | Classify separately; do not make speculative extensions prerequisites for the basic JSON-builder path |
 
 Relevant source documents include Generation MCP's README, `docs/GENERATION_HUB_DESIGN.md`, `docs/MANAGED_INPUTS.md`, `docs/WORKFLOW_VERIFICATION.md`, `docs/WORKFLOW_V3_FOUNDATION.md` and `docs/RUNTIME_DELEGATION.md`. Inspect the actual current files before relying on their implementation status.
