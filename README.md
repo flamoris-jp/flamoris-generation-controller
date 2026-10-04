@@ -36,14 +36,14 @@ ComfyUI, Irodori and YuE are examples of generation providers, not claims that t
 
 | Term | Responsibility | Owner |
 | --- | --- | --- |
-| Generation Workflow | Build a provider execution definition, such as ComfyUI workflow JSON, from trusted definitions and allowed values | Generation Controller; ComfyUI executes its graph |
-| AI Runtime Workflow | Control inference, its execution steps and active state | `flamoris-ai-runtime` |
+| ComfyWorkFlow | Build a provider execution definition, such as ComfyWorkFlow JSON, from trusted definitions and allowed values | Generation Controller; ComfyUI executes its graph |
+| ExecutionPlan | Control inference, its execution steps and active state | `flamoris-ai-runtime` |
 
-**The ComfyUI Workflow Builder does not move into AI Runtime.** Building JSON does not require an Agent, AI Runtime, MCP Hub, a GPU, or an inference Workflow engine. Submitting that JSON to a provider and verifying a production workflow are separate operations with their own prerequisites.
+**The ComfyWorkFlow Builder does not move into AI Runtime.** Building JSON does not require an Agent, AI Runtime, MCP Hub, a GPU, or an ExecutionPlan engine. Submitting that JSON to a provider and verifying a production workflow are separate operations with their own prerequisites.
 
 ## What it does not own
 
-MCP transport/catalog routing belongs to Generation MCP and MCP Hub. Personality, conversation and memory belong to AI Agent and are optional for generation. Native inference and inference Workflows belong to AI Runtime. Host-wide runtime/GPU transitions belong to GPU Node Manager. Studio retains user authorization and product state; ComfyUI retains actual ComfyUI graph execution.
+MCP transport/catalog routing belongs to Generation MCP and MCP Hub. Personality, conversation and memory belong to AI Agent and are optional for generation. Native inference and ExecutionPlans belong to AI Runtime. Host-wide runtime/GPU transitions belong to GPU Node Manager. Studio retains user authorization and product state; ComfyUI retains actual ComfyUI graph execution.
 
 No new generic DAG engine, cross-provider inference bridge, host manager or personality layer is required to extract the existing generation domain.
 
@@ -71,3 +71,8 @@ FLAMORIS is open-source software for creative work and AI-native production. Com
 ## License
 
 Code and documentation are licensed under [Apache License 2.0](LICENSE), unless otherwise noted. Models, weights, datasets, media, provider assets and generated outputs may have separate terms; the repository license does not automatically cover them.
+
+
+## Current implementation decision
+
+Do not implement this repository yet. When Generation work is explicitly resumed, the current `flamoris-generation-mcp` ComfyWorkFlow subsystem should be removed from the MCP repository rather than migrated here. Any future Controller ComfyWorkFlow implementation must be designed from the Controller contract at that time. The next implementation priority for FLAMORIS AI is Intelligence boundary cleanup, not this repository.
