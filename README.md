@@ -1,6 +1,6 @@
 # FLAMORIS Generation Controller
 
-Internal generation controller for FLAMORIS, managing generation providers, ComfyUI workflows, jobs, inputs, references, and generated assets independently of MCP transport.
+Internal generation controller for FLAMORIS, managing generation providers, ComfyWorkFlows, jobs, inputs, references, and generated assets independently of MCP transport.
 
 **Status: design and documentation only.** No Controller implementation, service endpoint, package, or deployment has been introduced. Existing generation behavior still lives in `flamoris-generation-mcp`; extraction and consumer migration require separate approval.
 
@@ -11,7 +11,7 @@ Part of [FLAMORIS AI](https://github.com/flamoris-jp/flamoris-ai). Architecture 
 The intended internal generation-domain boundary includes:
 
 - configured generation providers, their capabilities and provider adapters;
-- generation-provider workflow construction, particularly ComfyUI API-format workflow JSON and declared parameter/input bindings;
+- generation-provider ComfyWorkFlow construction, particularly ComfyUI API-format ComfyWorkFlow JSON and declared parameter/input bindings;
 - generation jobs, status, cancellation and results;
 - managed inputs and references, provider staging, generated assets and bounded retrieval;
 - generation-specific validation, existing verification safeguards and normalized provider failures.
@@ -32,7 +32,7 @@ Studio ------------------------------> Generation Controller -> providers
 
 ComfyUI, Irodori and YuE are examples of generation providers, not claims that this new repository already runs them. Actual provider support and qualification remain separately evidenced.
 
-## Two different meanings of Workflow
+## ExecutionPlan and ComfyWorkFlow
 
 | Term | Responsibility | Owner |
 | --- | --- | --- |
@@ -60,9 +60,9 @@ There are no install/build/run commands yet. Do not infer a service port, execut
 
 ## 日本語
 
-FLAMORIS Generation Controllerは、生成AIの制御をMCPから分離するための内部層です。ComfyUI用Workflow JSONの組み立て、生成job、provider adapter、参照入力、生成物を担当する設計です。現在は文書のみで、既存コードの移設・実機変更はしていません。
+FLAMORIS Generation Controllerは、生成AIの制御をMCPから分離するための内部層です。ComfyWorkFlow JSONの組み立て、生成job、provider adapter、参照入力、生成物を担当する設計です。現在は文書のみで、既存コードの移設・実機変更はしていません。
 
-**GenerationのWorkflowはComfyUIなどへ渡す実行定義、AI RuntimeのWorkflowは推論の制御です。両者を統合したり、ComfyUIのJSON生成をAI Runtimeへ移したりしません。** Studioは内部APIから、ChatGPTはMCP HubとGeneration MCPを経由して利用します。人格が必要な場合だけAI Agentが関わります。
+**ComfyUI系の実行定義は `ComfyWorkFlow`、AI Runtimeの推論実行計画は `ExecutionPlan` と呼びます。両者を統合したり、ComfyUIのJSON生成をAI Runtimeへ移したりしません。** Studioは内部APIから、ChatGPTはMCP HubとGeneration MCPを経由して利用します。人格が必要な場合だけAI Agentが関わります。
 
 ## FLAMORIS
 
