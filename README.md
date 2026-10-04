@@ -1,121 +1,73 @@
-# FLAMORIS Repository Template
+# FLAMORIS Generation Controller
 
-Standard repository template for FLAMORIS projects.
+Internal generation controller for FLAMORIS, managing generation providers, ComfyUI workflows, jobs, inputs, references, and generated assets independently of MCP transport.
 
-Use this repository as the starting point for new FLAMORIS repositories. After creating a repository from this template, replace the placeholders in this README with project-specific information and add only the language, runtime, build, and deployment files the project actually needs.
+**Status: design and documentation only.** No Controller implementation, service endpoint, package, or deployment has been introduced. Existing generation behavior still lives in `flamoris-generation-mcp`; extraction and consumer migration require separate approval.
 
-## Project
+Part of [FLAMORIS AI](https://github.com/flamoris-jp/flamoris-ai). Architecture authority: [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18). Owning design task: [#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
 
-**Name:** `<PROJECT_NAME>`
+## What it owns
 
-**Description:** `<PROJECT_DESCRIPTION>`
+The intended internal generation-domain boundary includes:
 
-**Status:** `<planned | development | stable | meta>`
+- configured generation providers, their capabilities and provider adapters;
+- generation-provider workflow construction, particularly ComfyUI API-format workflow JSON and declared parameter/input bindings;
+- generation jobs, status, cancellation and results;
+- managed inputs and references, provider staging, generated assets and bounded retrieval;
+- generation-specific validation, existing verification safeguards and normalized provider failures.
 
-For repositories in `flamoris-jp`, keep this wording aligned with the organization `development_status` custom property. State implemented behavior separately from planned work. Do not leave a repository looking like a future design after its runtime or product slice has already shipped.
+Provider selection is explicit. A common interface makes implementations replaceable; it does not imply automatic provider selection, fallback or a new universal scheduler.
 
-## 🧭 Repository identity / このRepositoryは何者？
+## Where it fits
 
-Replace the placeholders below with short, project-specific statements. Keep them near the top so a human or AI assistant can understand the repository before digging through Issues or source code.
+```text
+External MCP access:
+ChatGPT -> MCP Hub -> Generation MCP -> Generation Controller -> providers
 
-### What it is / 何者か
+Internal application access:
+Studio ------------------------------> Generation Controller -> providers
+```
 
-`<ONE_OR_TWO_SENTENCE_PROJECT_IDENTITY>`
+`flamoris-generation-mcp` is the external MCP adapter. Studio and other internal callers use the Controller's non-MCP contract. That contract's concrete transport and packaging are not decided by this repository's creation.
 
-### What it owns / 主な責任範囲
+ComfyUI, Irodori and YuE are examples of generation providers, not claims that this new repository already runs them. Actual provider support and qualification remain separately evidenced.
 
-- `<PRIMARY_RESPONSIBILITY_OR_AUTHORITY>`
-- `<SECONDARY_RESPONSIBILITY_IF_NEEDED>`
+## Two different meanings of Workflow
 
-### What it does not own / 持たない責任
+| Term | Responsibility | Owner |
+| --- | --- | --- |
+| Generation Workflow | Build a provider execution definition, such as ComfyUI workflow JSON, from trusted definitions and allowed values | Generation Controller; ComfyUI executes its graph |
+| AI Runtime Workflow | Control inference, its execution steps and active state | `flamoris-ai-runtime` |
 
-- `<IMPORTANT_NEIGHBORING_RESPONSIBILITY_OWNED_ELSEWHERE>`
+**The ComfyUI Workflow Builder does not move into AI Runtime.** Building JSON does not require an Agent, AI Runtime, MCP Hub, a GPU, or an inference Workflow engine. Submitting that JSON to a provider and verifying a production workflow are separate operations with their own prerequisites.
 
-Delete this subsection only when there is genuinely no likely ownership confusion.
+## What it does not own
 
-### Current status / 現在の状態
+MCP transport/catalog routing belongs to Generation MCP and MCP Hub. Personality, conversation and memory belong to AI Agent and are optional for generation. Native inference and inference Workflows belong to AI Runtime. Host-wide runtime/GPU transitions belong to GPU Node Manager. Studio retains user authorization and product state; ComfyUI retains actual ComfyUI graph execution.
 
-`<WHAT_IS_IMPLEMENTED_NOW_AND_WHAT_IS_STILL_PLANNED_OR_UNACCEPTED>`
+No new generic DAG engine, cross-provider inference bridge, host manager or personality layer is required to extract the existing generation domain.
 
-Do not describe planned behavior as shipped, or implemented behavior as merely future design.
+## Documentation
 
-### Where it fits / FLAMORISのどこに属する？
+- [Architecture and boundaries](docs/ARCHITECTURE.md)
+- [Extraction inventory and migration gates](docs/MIGRATION.md)
+- [Contributor guardrails](AGENTS.md)
+- [FLAMORIS organization map](https://github.com/flamoris-jp/.github)
+- [AI ecosystem map](https://github.com/flamoris-jp/flamoris-ai/blob/main/docs/ai-ecosystem.md)
+- [Shared repository policy](https://github.com/flamoris-jp/flamoris-commons/blob/main/docs/repository-policy.md)
 
-Start from the [FLAMORIS organization map](https://github.com/flamoris-jp/.github).
+There are no install/build/run commands yet. Do not infer a service port, executable, API route or Docker layout from another FLAMORIS repository.
 
-When relevant, also link the appropriate family map:
+## 日本語
 
-- 🎨 Windows / Desktop: [FLAMORIS Desktop Ecosystem](https://github.com/flamoris-jp/flamoris-commons/blob/main/docs/desktop-ecosystem.md)
-- 🤖 AI / MCP services: [FLAMORIS AI Ecosystem](https://github.com/flamoris-jp/flamoris-ai/blob/main/docs/ai-ecosystem.md)
+FLAMORIS Generation Controllerは、生成AIの制御をMCPから分離するための内部層です。ComfyUI用Workflow JSONの組み立て、生成job、provider adapter、参照入力、生成物を担当する設計です。現在は文書のみで、既存コードの移設・実機変更はしていません。
 
-The shared repository documentation policy lives in [FLAMORIS Commons](https://github.com/flamoris-jp/flamoris-commons/blob/main/docs/repository-policy.md).
-
-## 🏷️ GitHub metadata checklist / GitHub表示設定
-
-After creating a repository from this template, configure the GitHub repository metadata as well as the files.
-
-- **Description:** one concise sentence describing the repository's current role.
-- **Topics:** include `flamoris`, then add a small set of useful project/domain/technology topics. Prefer roughly 4–7 intentional topics over filling every slot.
-- **Development status:** set the organization `development_status` custom property and keep it aligned with this README.
-- **Visibility:** choose intentionally; do not expose deployment secrets, private topology, credentials, or private assets by making a repository public.
-
-Do not use obsolete or speculative Topics to advertise responsibilities the repository does not actually own.
-
-> GitHub repository metadata is not repository file content. When creating from a template, verify these settings explicitly rather than assuming every template setting was inherited. 🐾
-
-## Getting started
-
-Document the real setup, build, test, and run commands for this repository here.
-
-Do not copy commands from another FLAMORIS project unless they have been verified against the current implementation.
-
-## Repository principles
-
-- Keep the repository focused on one clear responsibility.
-- Treat current code, tests, documentation, and repository configuration as the source of truth.
-- Keep public documentation portable: describe product/runtime contracts without publishing private hostnames, credentials, deployment topology, or machine-specific paths.
-- Prefer explicit boundaries over speculative abstractions.
-- Keep secrets, credentials, tokens, and private data out of source control and logs.
-- Add tests where practical and document externally visible behavior.
-- Inspect existing FLAMORIS shared packages before introducing duplicate infrastructure.
-- AI-assisted development is welcome; submitted changes still require human review and responsibility.
+**GenerationのWorkflowはComfyUIなどへ渡す実行定義、AI RuntimeのWorkflowは推論の制御です。両者を統合したり、ComfyUIのJSON生成をAI Runtimeへ移したりしません。** Studioは内部APIから、ChatGPTはMCP HubとGeneration MCPを経由して利用します。人格が必要な場合だけAI Agentが関わります。
 
 ## FLAMORIS
 
-FLAMORIS is open-source software for creative work and AI-native production.
-
-Use it however you like.
-
-Commercial use is welcome and does not require permission. If you'd like, we'd be happy to hear what you used FLAMORIS for. This is completely optional.
-
-FLAMORIS software is provided as-is. We do not provide individual support or guaranteed assistance.
-
-If you run into trouble, let your AI assistant read the repository, documentation, Issues, tests, logs, and source code and help you solve it.
-
-If FLAMORIS helps you or you find it interesting, your support helps fund development and keeps the project growing. 🌱
-
-<sub>Mostly GPU bills.</sub>
-
----
-
-## FLAMORISについて
-
-FLAMORISは、クリエイティブ制作とAIネイティブな制作環境のためのオープンソースソフトウェアです。
-
-勝手に使ってください。改造しても、組み込んでも、面白いものや変なものを作ってもOKです。
-
-商用作品や製品で使う場合も許可は不要です。もしよければ「こんなのに使ったよ」と教えてもらえるとうれしいです。もちろん強制ではありません。
-
-FLAMORISのソフトウェアは現状のまま提供されます。個別サポートや動作保証はありません。
-
-困ったときは、README、ドキュメント、Issue、テスト、ログ、ソースコードをあなたのAIに読ませて、自己サポートしてもらってください。
-
-もしお役に立てたり、面白いと思っていただけたなら、開発費用をご支援いただけるとうれしいです。FLAMORISは元気になって育ちます。🌱
-
-<sub>主にGPU代とか。</sub>
+FLAMORIS is open-source software for creative work and AI-native production. Commercial use of the licensed code is welcome and does not require individual permission. Software is provided as-is, without guaranteed individual support. Repository documentation, Issues, tests and source are the primary self-support references.
 
 ## License
 
-Code in this repository is licensed under the [Apache License 2.0](LICENSE), unless otherwise noted.
-
-AI models, model weights, datasets, media, and other non-code assets may use separate licenses. State their applicable licenses alongside those assets.
+Code and documentation are licensed under [Apache License 2.0](LICENSE), unless otherwise noted. Models, weights, datasets, media, provider assets and generated outputs may have separate terms; the repository license does not automatically cover them.
