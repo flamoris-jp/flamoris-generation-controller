@@ -1,4 +1,4 @@
-# Extraction inventory and migration gates
+# Boundary inventory and future cleanup gates
 
 Parent: [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18). Owning design issue: [#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
 
@@ -6,18 +6,18 @@ Parent: [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18).
 
 ## Initial responsibility inventory
 
-This is a domain-level classification derived from the current Generation documentation and tracked work, not a completed file-by-file source audit. Exact source/test paths and revisions must be recorded before moving code.
+This is a domain-level classification derived from current Generation documentation and tracked work. It is not a code-migration plan. Exact source/test paths and revisions must be recorded before later deletion or redesign.
 
 | Existing responsibility in Generation MCP | Target disposition |
 | --- | --- |
 | MCP tools, annotations, transport, native MCP content representation | Keep in Generation MCP; translate to/from the internal contract |
 | ProviderRegistry / CapabilityRegistry and provider adapters | Extract generation-domain behavior to Controller; discovery in MCP is a projection |
-| WorkflowStore, trusted definitions, allowed bindings, ComfyUI graph construction | Extract to Controller; do not move to AI Runtime |
+| ComfyWorkFlow store/registry, trusted definitions, allowed bindings, ComfyUI graph construction | **Delete from Generation MCP when cleanup is later authorized; do not migrate this implementation to Controller and do not move it to AI Runtime** |
 | JobStore, submission reservation, status/cancel/result and uncertain-outcome behavior | Extract as one authority, preserving existing guarantees and identity |
 | Managed inputs/references, provider staging, generated assets and bounded transfer | Extract domain behavior; preserve Studio ownership checks and MCP presentation separately |
 | Generation verification/attestation checks | Preserve generation-domain semantics; audit relocation without discarding safeguards |
 | GPU/service lifecycle and runtime fact collection | Leave with GPU Node Manager/provider/deployment owners |
-| Native inference and inference Workflow machinery | Leave with AI Runtime; not part of this extraction |
+| Native inference and ExecutionPlan machinery | Leave with AI Runtime; not part of this extraction |
 | v3 includes, composition, Runtime-delegation proposals and new provider expansion | Classify separately; do not make speculative extensions prerequisites for the basic JSON-builder path |
 
 Relevant source documents include Generation MCP's README, `docs/GENERATION_HUB_DESIGN.md`, `docs/MANAGED_INPUTS.md`, `docs/WORKFLOW_VERIFICATION.md`, `docs/WORKFLOW_V3_FOUNDATION.md` and `docs/RUNTIME_DELEGATION.md`. Inspect the actual current files before relying on their implementation status.
@@ -34,12 +34,12 @@ Historical/acceptance trackers: Generation MCP [#19](https://github.com/flamoris
 
 Do not answer these questions by inventing a new gateway framework, host topology or API route in documentation.
 
-## Later implementation sequence, not current authorization
+## Later cleanup sequence, not current authorization
 
-1. Record the source revision and file/test inventory. Separate transport code from domain behavior.
-2. Review the minimal internal contract and a migration strategy with one active generation authority. Keep provider/model details out of Studio.
-3. Extract existing behavior in reviewable slices, preserving IDs, persistent formats, safety boundaries and tests. Do not simultaneously redesign inference or expand providers.
-4. Adapt Generation MCP to that internal contract and migrate Studio away from internal MCP/Hub calls. Do not leave two active independent state owners during transition.
+1. Record the source revision and file/test inventory. Separate MCP transport code from misplaced generation-domain code.
+2. For the existing Generation MCP ComfyWorkFlow subsystem, plan deletion rather than transfer. Preserve only the tests/evidence that remain useful for later Controller design.
+3. Keep Generation Controller unimplemented until a separate instruction defines the minimal internal contract and state authority.
+4. After that future decision, adapt Generation MCP and Studio to the reviewed internal contract without leaving two active independent state owners.
 5. Perform separately authorized acceptance and rollback checks before live cutover. Preserve uncertain work and retained data; no automatic replay or destructive cleanup.
 
 Each step after design requires separately scoped approval. No source move, new dependency, migration script, runtime activation or paid smoke is part of the current documentation PR.
@@ -57,3 +57,8 @@ Each step after design requires separately scoped approval. No source move, new 
 ## Existing Issue handling
 
 Keep existing Issues and merged PRs as evidence. Mark affected unfinished work as on hold and link the correction parent/child. After design review, decide item by item whether to retain the remaining requirement, re-scope it under Controller, or supersede it with a linked replacement. Do not mass-close, reopen completed work or remove evidence just to make the board look clean.
+
+
+## Current sequencing
+
+Do not start Generation implementation from this document. The immediate FLAMORIS AI implementation priority is Intelligence boundary cleanup. Generation Controller and ComfyWorkFlow cleanup remain paused until separately resumed.
