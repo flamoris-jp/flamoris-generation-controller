@@ -2,7 +2,7 @@
 
 Parent: [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18). Owning design issue: [#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
 
-**Documentation first.** This plan does not authorize extraction, deployment or restarting Workflow/reference-image development. Existing merged work remains in place. Resume requires an explicit user instruction.
+**Documentation first.** This plan does not authorize extraction, deployment or restarting ComfyWorkFlow/reference-image development. Existing merged work remains in place. Resume requires an explicit user instruction.
 
 ## Initial responsibility inventory
 
