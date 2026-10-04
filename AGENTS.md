@@ -4,12 +4,12 @@ This repository documents the future internal generation-domain controller for F
 
 ## Current authorization
 
-The current correction stage permits documentation and Issue organization in Chat only. Terminology is fixed: `ComfyWorkFlow` for ComfyUI execution definitions and `ExecutionPlan` for AI Runtime inference execution. Avoid bare `Workflow` for either. It does not authorize implementation, Work delegation, merging, deployment, runtime restart, live generation, credential changes or further Workflow/reference-image feature development. Merging documentation does not automatically lift this hold. Wait for an explicit user instruction before implementation or migration.
+The current correction stage permits documentation and Issue organization in Chat only. Terminology is fixed: `ComfyWorkFlow` for ComfyUI execution definitions and `ExecuteFlow` for AI Runtime inference execution. Avoid bare `Workflow` for either. It does not authorize implementation, Work delegation, merging, deployment, runtime restart, live generation, credential changes or further Workflow/reference-image feature development. Merging documentation does not automatically lift this hold. Wait for an explicit user instruction before implementation or migration.
 
 ## Non-negotiable boundaries
 
 1. Generation MCP is an external MCP adapter; the Controller is internal generation logic. Internal application/service calls do not use MCP or MCP Hub.
-2. ComfyWorkFlow means provider execution-definition construction, particularly ComfyUI API-format JSON. ExecutionPlan means inference control. Never transfer the ComfyUI builder to AI Runtime because both use the word Workflow.
+2. ComfyWorkFlow means provider execution-definition construction, particularly ComfyUI API-format JSON. ExecuteFlow means inference control. Never transfer the ComfyUI builder to AI Runtime because both use the word Workflow.
 3. ComfyUI executes ComfyUI graphs. The Controller builds/validates/submits them and tracks generation-domain results; it does not implement a replacement ComfyUI or inference scheduler.
 4. Agent is optional personality/conversation/memory behavior, not a prerequisite for ordinary generation or JSON construction.
 5. GPU Node Manager retains host lifecycle authority. Readiness evidence is not permission to copy host/systemd control into this repository.
