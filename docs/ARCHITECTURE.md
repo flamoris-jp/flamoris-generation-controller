@@ -21,7 +21,7 @@ Arrows after the MCP adapter represent internal, non-MCP calls. Library versus a
 | Generation Controller | Provider metadata/adapters; generation-definition building; generation jobs, inputs/references, outputs/assets; domain validation | MCP routing, personality, native inference, host lifecycle |
 | Generation MCP | External tools, MCP schemas/annotations, protocol validation and internal request/result translation | A second generation store, compiler, reservation or provider engine |
 | ComfyUI / other providers | Their actual provider execution and provider-local state | Studio user identity or FLAMORIS product documents |
-| AI Runtime | Inference execution, ExecutionPlans, active jobs/state/resources | Ownership of ComfyUI graph construction merely because the older terminology used the same word |
+| AI Runtime | Inference execution, ExecuteFlows, active jobs/state/resources | Ownership of ComfyUI graph construction merely because the older terminology used the same word |
 | AI Agent | Optional personality, conversation, memory and context policy | Mandatory mediation of every generation request |
 | GPU Node Manager | Configured host runtime/GPU lifecycle and transition coordination | Generation-job state or per-ComfyWorkFlow approval |
 | Studio | Authenticated UI, product drafts and user-scoped access | Provider graph internals or an alternate generation state store |
@@ -48,9 +48,9 @@ A future Controller-side ComfyWorkFlow builder would apply declared substitution
 
 Reference-image bindings, templates and supported model-specific graphs stay in the generation domain. Mentioning LoRA, ControlNet, video or another graph family in a design is not evidence of current implementation or support.
 
-## ExecutionPlan: inference control
+## ExecuteFlow: inference control
 
-AI Runtime's ExecutionPlan controls inference and associated execution steps, state, suspension/resumption and registered capabilities where implemented. It is a different execution model and authority. No conversion from every ComfyUI graph to Runtime IR is required or authorized here.
+AI Runtime's ExecuteFlow controls inference and associated execution steps, state, suspension/resumption and registered capabilities where implemented. It is a different execution model and authority. No conversion from every ComfyUI graph to Runtime IR is required or authorized here.
 
 A future explicitly requested inference workload may call generation as a bounded internal capability. That is optional integration, not a prerequisite for the Controller, JSON builder, reference images or Studio generation.
 
