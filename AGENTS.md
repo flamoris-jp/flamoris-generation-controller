@@ -1,20 +1,20 @@
 # Contributor and AI-agent instructions
 
-This repository is the internal generation-domain controller for FLAMORIS. Read README.md, docs/ARCHITECTURE.md, docs/MIGRATION.md and [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18) before proposing changes.
+This repository documents the future internal generation-domain controller for FLAMORIS. It is not implemented yet. Read README.md, docs/ARCHITECTURE.md, docs/MIGRATION.md and [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18) before proposing changes.
 
 ## Current authorization
 
-The current correction stage permits documentation and Issue organization in Chat only. It does not authorize implementation, Work delegation, merging, deployment, runtime restart, live generation, credential changes or further Workflow/reference-image feature development. Merging documentation does not automatically lift this hold. Wait for an explicit user instruction before implementation or migration.
+The current correction stage permits documentation and Issue organization in Chat only. Terminology is fixed: `ComfyWorkFlow` for ComfyUI execution definitions and `ExecutionPlan` for AI Runtime inference execution. Avoid bare `Workflow` for either. It does not authorize implementation, Work delegation, merging, deployment, runtime restart, live generation, credential changes or further Workflow/reference-image feature development. Merging documentation does not automatically lift this hold. Wait for an explicit user instruction before implementation or migration.
 
 ## Non-negotiable boundaries
 
 1. Generation MCP is an external MCP adapter; the Controller is internal generation logic. Internal application/service calls do not use MCP or MCP Hub.
-2. Generation Workflow means provider execution-definition construction, particularly ComfyUI API-format JSON. AI Runtime Workflow means inference control. Never transfer the ComfyUI builder to AI Runtime because both use the word Workflow.
+2. ComfyWorkFlow means provider execution-definition construction, particularly ComfyUI API-format JSON. ExecutionPlan means inference control. Never transfer the ComfyUI builder to AI Runtime because both use the word Workflow.
 3. ComfyUI executes ComfyUI graphs. The Controller builds/validates/submits them and tracks generation-domain results; it does not implement a replacement ComfyUI or inference scheduler.
 4. Agent is optional personality/conversation/memory behavior, not a prerequisite for ordinary generation or JSON construction.
 5. GPU Node Manager retains host lifecycle authority. Readiness evidence is not permission to copy host/systemd control into this repository.
 6. Keep one generation job/input/asset authority shared by internal and MCP callers. Two frontends must not create competing registries, reservations or stores.
-7. Reuse existing generation logic and tests deliberately. Extraction is not permission to rebuild a generic framework or add speculative providers.
+7. Reuse existing evidence and tests deliberately, but do not migrate the current Generation MCP ComfyWorkFlow implementation. Later cleanup should delete that misplaced implementation from the MCP repository; future Controller code is a separate design/implementation decision.
 
 ## Implementation reality versus target
 
