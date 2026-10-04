@@ -1,69 +1,30 @@
-# AGENTS.md
+# Contributor and AI-agent instructions
 
-This repository is part of the FLAMORIS ecosystem.
+This repository documents a future internal generation-domain controller. It has no Controller implementation. Read README.md, docs/ARCHITECTURE.md, docs/MIGRATION.md and [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18).
 
-AI agents and human contributors should inspect the current repository before making substantial changes. Do not assume that setup, build, deployment, service names, paths, configuration, or architecture match another FLAMORIS repository.
+## Current authorization
 
-## Core principles
+Documentation review/fixes and explicitly requested documentation merges are permitted in Chat. Do not implement Controller, delegate Controller work to Work, migrate/delete source, deploy, restart, change credentials or run providers. Documentation merge is not implementation resumption. Intelligence cleanup elsewhere is the next priority.
 
-1. **Current implementation is authoritative**
-   - Read the repository documentation, configuration, tests, and relevant source before changing behavior.
-   - Do not invent repository-specific commands, paths, services, or configuration.
+## Fixed boundaries
 
-2. **Keep responsibility clear**
-   - Keep this repository focused on its documented purpose.
-   - Preserve application and service ownership boundaries.
-   - Do not create a second source of truth for state owned elsewhere.
+1. Generation MCP is an external adapter. Internal application/service calls use non-MCP contracts, not MCP Hub.
+2. `ComfyWorkFlow` means ComfyUI graph/API-format JSON. `ExecuteFlow` means Runtime inference flow; `ExecutionPlan` remains the Runtime's compiled representation. Do not use bare `Workflow` for a new FLAMORIS design concept. Preserve exact current identifiers and historical quotations when required for truthful documentation.
+3. The existing Generation MCP ComfyWorkFlow subsystem is not a migration source for this repository. Later removal from MCP is separately authorized; do not automatically recreate it here.
+4. Other provider requests are not automatically ComfyWorkFlow. Provider execution stays with the provider. No generic inference or scheduling platform is inferred from generation requests.
+5. Agent is optional personality/conversation/memory. GPU Node Manager retains host lifecycle authority. Studio retains product state and user authorization.
+6. Future internal and external callers must share one generation state owner, not per-frontend stores/reservations.
 
-3. **Reuse deliberately**
-   - Check existing FLAMORIS shared packages and repositories before duplicating common infrastructure.
-   - Reuse code only when the dependency direction and ownership boundary remain clear.
-   - Avoid speculative abstractions for requirements that do not yet exist.
+## Design and retained safety
 
-4. **Security and privacy are architectural requirements**
-   - Never commit or log secrets, credentials, tokens, private keys, or sensitive user data.
-   - Prefer least-privilege access and bounded resource use.
-   - Treat external input and remote responses as untrusted.
+Before any future implementation, inspect actual source/tests/callers and record exact retained versus removed behavior. Do not invent endpoints, ports, dependencies, formats or commands. Source retirement is not deletion of assets, saved definitions, user data, evidence or unresolved jobs.
 
-5. **Stable behavior over cleverness**
-   - Prefer explicit, testable contracts and straightforward implementations.
-   - Preserve existing public behavior unless a change intentionally modifies it.
-   - Document externally visible behavior and compatibility impact.
+Retained paths must keep authorization, immutable inputs, bounded decoding/staging/transfer, safe paths and errors, provenance and no replay of uncertain submissions. Do not silently restore a removed feature through fallback, bypass checks or fabricate successful execution. Separate JSON validity, provider availability, qualification and authorization.
 
-6. **Documentation must track reality**
-   - Mark the current implementation/status explicitly when a repository has both shipped behavior and future phases.
-   - Do not describe implemented behavior as merely planned, and do not describe planned behavior as already shipped.
-   - Keep public architecture portable. Machine names, private topology, credentials, and deployment-only paths belong in private deployment documentation rather than public repository defaults.
+Credentials stay in operator configuration, not browser inputs, persona text, prompts, public errors or repository files. No arbitrary shell/URLs/paths, model downloads or implicit GPU activation.
 
-7. **AI-native, human-authoritative**
-   - AI-assisted development is welcome.
-   - Humans remain responsible for reviewing behavior, security, licensing, and compatibility.
+## Review
 
-## Before implementing a substantial change
+Use focused documentation commits. Read the resulting text for contradictions, not only keyword replacement. Merge only with explicit authorization. Do not claim runtime tests or live qualification from a documentation-only change. Keep the design Issue open for its remaining deliverables.
 
-- read this file and README.md;
-- identify **what this repository is, what it owns, what it does not own, its current status, and where it fits in FLAMORIS**;
-- read the [organization map](https://github.com/flamoris-jp/.github) and the relevant family map when cross-repository context matters;
-- read relevant docs, Issues, and Pull Requests;
-- inspect current implementation and tests;
-- identify the source of truth and dependency direction;
-- check whether reusable FLAMORIS infrastructure already exists;
-- verify repository-specific setup and deployment details instead of guessing.
-
-## Testing
-
-Add or update tests where practical.
-
-Prefer deterministic tests and explicit contracts. When behavior differs by platform, runtime, provider, or environment, document the supported boundary and test the relevant cases.
-
-## Licensing
-
-Unless stated otherwise, code in this repository is licensed under Apache License 2.0.
-
-Do not add third-party code, models, model weights, datasets, fonts, media, or generated assets unless their licenses are compatible and clearly documented.
-
-## Support
-
-FLAMORIS does not provide guaranteed individual support.
-
-Use the repository documentation, Issues, tests, logs, and source code as primary references when diagnosing problems.
+Follow the [repository policy](https://github.com/flamoris-jp/flamoris-commons/blob/main/docs/repository-policy.md). Keep public documentation portable; preserve licenses and third-party/model terms. Do not force-push shared branches.
