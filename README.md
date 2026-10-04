@@ -32,18 +32,18 @@ Studio ------------------------------> Generation Controller -> providers
 
 ComfyUI, Irodori and YuE are examples of generation providers, not claims that this new repository already runs them. Actual provider support and qualification remain separately evidenced.
 
-## ExecutionPlan and ComfyWorkFlow
+## ExecuteFlow and ComfyWorkFlow
 
 | Term | Responsibility | Owner |
 | --- | --- | --- |
 | ComfyWorkFlow | Build a provider execution definition, such as ComfyWorkFlow JSON, from trusted definitions and allowed values | Generation Controller; ComfyUI executes its graph |
-| ExecutionPlan | Control inference, its execution steps and active state | `flamoris-ai-runtime` |
+| ExecuteFlow | Control inference, its execution steps and active state | `flamoris-ai-runtime` |
 
-**The ComfyWorkFlow Builder does not move into AI Runtime.** Building JSON does not require an Agent, AI Runtime, MCP Hub, a GPU, or an ExecutionPlan engine. Submitting that JSON to a provider and verifying a production workflow are separate operations with their own prerequisites.
+**The ComfyWorkFlow Builder does not move into AI Runtime.** Building JSON does not require an Agent, AI Runtime, MCP Hub, a GPU, or an ExecuteFlow engine. Submitting that JSON to a provider and verifying a production workflow are separate operations with their own prerequisites.
 
 ## What it does not own
 
-MCP transport/catalog routing belongs to Generation MCP and MCP Hub. Personality, conversation and memory belong to AI Agent and are optional for generation. Native inference and ExecutionPlans belong to AI Runtime. Host-wide runtime/GPU transitions belong to GPU Node Manager. Studio retains user authorization and product state; ComfyUI retains actual ComfyUI graph execution.
+MCP transport/catalog routing belongs to Generation MCP and MCP Hub. Personality, conversation and memory belong to AI Agent and are optional for generation. Native inference and ExecuteFlows belong to AI Runtime. Host-wide runtime/GPU transitions belong to GPU Node Manager. Studio retains user authorization and product state; ComfyUI retains actual ComfyUI graph execution.
 
 No new generic DAG engine, cross-provider inference bridge, host manager or personality layer is required to extract the existing generation domain.
 
@@ -62,7 +62,7 @@ There are no install/build/run commands yet. Do not infer a service port, execut
 
 FLAMORIS Generation Controllerは、生成AIの制御をMCPから分離するための内部層です。ComfyWorkFlow JSONの組み立て、生成job、provider adapter、参照入力、生成物を担当する設計です。現在は文書のみで、既存コードの移設・実機変更はしていません。
 
-**ComfyUI系の実行定義は `ComfyWorkFlow`、AI Runtimeの推論実行計画は `ExecutionPlan` と呼びます。両者を統合したり、ComfyUIのJSON生成をAI Runtimeへ移したりしません。** Studioは内部APIから、ChatGPTはMCP HubとGeneration MCPを経由して利用します。人格が必要な場合だけAI Agentが関わります。
+**ComfyUI系の実行定義は `ComfyWorkFlow`、AI Runtimeの推論実行計画は `ExecuteFlow` と呼びます。両者を統合したり、ComfyUIのJSON生成をAI Runtimeへ移したりしません。** Studioは内部APIから、ChatGPTはMCP HubとGeneration MCPを経由して利用します。人格が必要な場合だけAI Agentが関わります。
 
 ## FLAMORIS
 
