@@ -1,64 +1,37 @@
-# Boundary inventory and future cleanup gates
+# Boundary inventory and deferred cleanup
 
-Parent: [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18). Owning design issue: [#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
+Parent: [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18). Local scope: [#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1); MCP-side scope: [Generation #67](https://github.com/flamoris-jp/flamoris-generation-mcp/issues/67).
 
-**Documentation first.** This plan does not authorize extraction, deployment or restarting ComfyWorkFlow/reference-image development. Existing merged work remains in place. Resume requires an explicit user instruction.
+This filename is retained for existing links. **This is not an extraction order. Controller is not implemented now; Intelligence cleanup comes first.**
 
-## Initial responsibility inventory
+## Disposition to review later
 
-This is a domain-level classification derived from current Generation documentation and tracked work. It is not a code-migration plan. Exact source/test paths and revisions must be recorded before later deletion or redesign.
-
-| Existing responsibility in Generation MCP | Target disposition |
+| Existing concern | Direction, not present authorization |
 | --- | --- |
-| MCP tools, annotations, transport, native MCP content representation | Keep in Generation MCP; translate to/from the internal contract |
-| ProviderRegistry / CapabilityRegistry and provider adapters | Extract generation-domain behavior to Controller; discovery in MCP is a projection |
-| ComfyWorkFlow store/registry, trusted definitions, allowed bindings, ComfyUI graph construction | **Delete from Generation MCP when cleanup is later authorized; do not migrate this implementation to Controller and do not move it to AI Runtime** |
-| JobStore, submission reservation, status/cancel/result and uncertain-outcome behavior | Extract as one authority, preserving existing guarantees and identity |
-| Managed inputs/references, provider staging, generated assets and bounded transfer | Extract domain behavior; preserve Studio ownership checks and MCP presentation separately |
-| Generation verification/attestation checks | Preserve generation-domain semantics; audit relocation without discarding safeguards |
-| GPU/service lifecycle and runtime fact collection | Leave with GPU Node Manager/provider/deployment owners |
-| Native inference and ExecuteFlow machinery | Leave with AI Runtime; not part of this extraction |
-| v3 includes, composition, Runtime-delegation proposals and new provider expansion | Classify separately; do not make speculative extensions prerequisites for the basic JSON-builder path |
+| MCP tools/annotations/transport/content mapping | Keep external MCP responsibility in Generation MCP |
+| ComfyWorkFlow builder/registry/bindings and associated subsystem | Later removal from Generation MCP, not transfer into Controller or Runtime; inventory exact boundaries first |
+| Provider metadata/adapters and capability registry | Candidate future Controller responsibility; no blanket copy or rewrite authorized |
+| JobStore/reservation/status/cancel/results | Decide future ownership without duplicating state or losing unresolved work; no move now |
+| Managed inputs/staging/assets/transfer | Preserve data, access checks and safety; future ownership review, not data deletion |
+| Qualification/invalidation records and checks | Separate safeguards needed by retained paths from checks owned only by a retired feature; no bypass or evidence deletion by default |
+| Host lifecycle and measured runtime facts | Remain with GPU Node Manager/provider/deployment owners |
+| ExecuteFlow, compiled ExecutionPlan and native inference | Remain with AI Runtime |
+| v3 composition/bridge/provider expansion | Deferred; not a prerequisite for Intelligence cleanup or simple ComfyWorkFlow JSON construction |
 
-Relevant source documents include Generation MCP's README, `docs/GENERATION_HUB_DESIGN.md`, `docs/MANAGED_INPUTS.md`, `docs/WORKFLOW_VERIFICATION.md`, `docs/WORKFLOW_V3_FOUNDATION.md` and `docs/RUNTIME_DELEGATION.md`. Inspect the actual current files before relying on their implementation status.
+This is a domain-level inventory, not a completed file-by-file audit. The later removal task must pin the source revision and exact source/test/tool/caller scope. In particular, a generic recipe store may support non-ComfyUI providers; names alone are insufficient grounds to delete it.
 
-Historical/acceptance trackers: Generation MCP [#19](https://github.com/flamoris-jp/flamoris-generation-mcp/issues/19), [#42](https://github.com/flamoris-jp/flamoris-generation-mcp/issues/42), [#30](https://github.com/flamoris-jp/flamoris-generation-mcp/issues/30), [#25](https://github.com/flamoris-jp/flamoris-generation-mcp/issues/25), [#31](https://github.com/flamoris-jp/flamoris-generation-mcp/issues/31) and [#45](https://github.com/flamoris-jp/flamoris-generation-mcp/issues/45). Their former repository ownership is not the new target architecture, and old checked/closed work is not undone by this plan.
+## Before any later Generation deletion
 
-## Design questions that remain open
+Record affected external tools and Studio consumers, the behavior that remains, unsupported-call errors, data readers, saved definitions/assets/inputs/evidence, active or uncertain reservations, and rollback needs. Do not treat code retirement as permission to drop persistent data or break retained provider paths silently.
 
-- What is the smallest common internal contract for the actual Studio and MCP callers?
-- Does the existing deployment require a shared service, or can a library boundary meet it without duplicating state? Do not assume one instance per caller is safe.
-- Which exact modules, persistent formats and tests can move unchanged?
-- How will existing job/asset/input identities, active or uncertain reservations, provenance and configured storage survive migration?
-- Which existing MCP contracts remain compatible, and which genuinely require an explicit versioned transition?
+Existing source/test evidence can inform design without migrating the implementation. A future Controller task must be minimal and separately authorized; it is not ordered to recreate the same subsystem.
 
-Do not answer these questions by inventing a new gateway framework, host topology or API route in documentation.
+## Evidence and history
 
-## Later cleanup sequence, not current authorization
+Builder-only tests establish JSON construction, not provider execution or production qualification. Later retained provider/domain tests must cover authorization, bounds, state and uncertain outcomes; external MCP tests cover mapping rather than a second state machine. Real generation, cutover and rollback require separate operational approval.
 
-1. Record the source revision and file/test inventory. Separate MCP transport code from misplaced generation-domain code.
-2. For the existing Generation MCP ComfyWorkFlow subsystem, plan deletion rather than transfer. Preserve only the tests/evidence that remain useful for later Controller design.
-3. Keep Generation Controller unimplemented until a separate instruction defines the minimal internal contract and state authority.
-4. After that future decision, adapt Generation MCP and Studio to the reviewed internal contract without leaving two active independent state owners.
-5. Perform separately authorized acceptance and rollback checks before live cutover. Preserve uncertain work and retained data; no automatic replay or destructive cleanup.
+Historical references include Generation MCP #19/#42 (ComfyUI definitions and reference semantics), #30 (managed inputs), #25/#31 (providers), and #45-related v3 work. Their literal code/file names and acceptance records remain history. No completed Issue or merged PR is reopened or reverted by this document.
 
-Each step after design requires separately scoped approval. No source move, new dependency, migration script, runtime activation or paid smoke is part of the current documentation PR.
+## Current completion boundary
 
-## Acceptance must remain layered
-
-**Builder-only:** trusted graph/fixture plus allowed values produces deterministic JSON; undeclared or invalid bindings are rejected. No GPU, Agent, Runtime or MCP server is needed for this test.
-
-**Controller/provider:** fake provider tests verify discovery, jobs, references, outputs, bounded failures, authorization integration and no replay. Existing protections must not disappear when code moves.
-
-**MCP adapter:** protocol/schema/result mapping agrees with the reviewed internal behavior without a second store or execution authority.
-
-**Live provider and migration:** actual generation, reference influence, qualification, restart/retained-data compatibility and client isolation are checked only under explicit operational approval. Passing offline tests does not claim these checks passed.
-
-## Existing Issue handling
-
-Keep existing Issues and merged PRs as evidence. Mark affected unfinished work as on hold and link the correction parent/child. After design review, decide item by item whether to retain the remaining requirement, re-scope it under Controller, or supersede it with a linked replacement. Do not mass-close, reopen completed work or remove evidence just to make the board look clean.
-
-
-## Current sequencing
-
-Do not start Generation implementation from this document. The immediate FLAMORIS AI implementation priority is Intelligence boundary cleanup. Generation Controller and ComfyWorkFlow cleanup remain paused until separately resumed.
+Only documentation review, fixes and requested documentation merges are in scope. Exact inventories, internal API/packaging decisions, Controller implementation, source deletion, reference-image expansion and live migration remain future work. Keep the design/correction Issues open for their actual remaining scope.

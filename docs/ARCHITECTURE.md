@@ -1,78 +1,45 @@
-# Generation Controller architecture
+# Future Generation Controller boundary
 
-Status: agreed responsibility direction; implementation and concrete internal API remain pending. Coordination: [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18). Local design: [#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
-
-## Purpose
-
-Define the future generation-domain boundary separately from the MCP-facing adapter. This document does not authorize or begin a code extraction. The target is not a new inference platform. It is a reusable internal boundary for existing generation-provider operations.
+Authority: [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18); local design [#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1). Controller implementation is deferred. This document defines a target, not a running service or a code-extraction task.
 
 ```text
 ChatGPT -> MCP Hub -> Generation MCP --+
                                       |
-Studio -------------------------------+-> Generation Controller -> providers
+Studio -------------------------------+-> future Controller -> providers
 ```
 
-Arrows after the MCP adapter represent internal, non-MCP calls. Library versus authenticated service transport is a later, bounded design decision based on actual deployment and state ownership. This diagram does not prescribe a new network hop for every call.
+Behind the MCP facade, callers use an internal non-MCP contract. Exact library/service packaging, authentication, deployment and DTOs require later design; no extra network service is mandated.
 
-## Responsibility matrix
+## Intended ownership
 
-| Component | Owns | Does not acquire through this correction |
-| --- | --- | --- |
-| Generation Controller | Provider metadata/adapters; generation-definition building; generation jobs, inputs/references, outputs/assets; domain validation | MCP routing, personality, native inference, host lifecycle |
-| Generation MCP | External tools, MCP schemas/annotations, protocol validation and internal request/result translation | A second generation store, compiler, reservation or provider engine |
-| ComfyUI / other providers | Their actual provider execution and provider-local state | Studio user identity or FLAMORIS product documents |
-| AI Runtime | Inference execution, ExecuteFlows, active jobs/state/resources | Ownership of ComfyUI graph construction merely because the older terminology used the same word |
-| AI Agent | Optional personality, conversation, memory and context policy | Mandatory mediation of every generation request |
-| GPU Node Manager | Configured host runtime/GPU lifecycle and transition coordination | Generation-job state or per-ComfyWorkFlow approval |
-| Studio | Authenticated UI, product drafts and user-scoped access | Provider graph internals or an alternate generation state store |
+| Component | Target responsibility |
+| --- | --- |
+| Controller | Internal generation requests/provider adapters, jobs/results, inputs/references, assets and domain checks |
+| Generation MCP | External tools, MCP validation/annotations and request/result translation |
+| ComfyUI / other providers | Actual provider execution and provider-local state |
+| AI Runtime | Inference, ExecuteFlow and compiled ExecutionPlan, active jobs/state/resources |
+| AI Agent | Optional personality, conversations and context policy |
+| GPU Node Manager | Host-wide runtime/GPU lifecycle |
+| Studio | Authenticated UI, drafts and user-scoped access |
 
-## ComfyWorkFlow: build JSON, let the provider execute
+## ComfyWorkFlow is not ExecuteFlow
 
-```text
-Trusted ComfyUI API-format definition
-  + declared parameter bindings
-  + validated values / managed reference handles
-                         |
-                         v
-                ComfyWorkFlow JSON builder
-                         |
-                         v
-                 ComfyWorkFlow JSON
-                         |
-                separate submit operation
-                         v
-                       ComfyUI
-```
+A ComfyWorkFlow is ComfyUI API-format graph/JSON. JSON construction may apply declared values and managed reference bindings; the provider then executes the graph. It is not a Runtime inference flow and needs no compulsory Agent, AI Runtime or MCP Hub. Other providers may use ordinary generation recipes instead.
 
-A future Controller-side ComfyWorkFlow builder would apply declared substitutions and check the relevant contract. The existing Generation MCP implementation is not transferred here. It does not execute model nodes, schedule inference, introduce Agent conversations or require a Runtime bridge. Graph construction may be tested entirely offline. Actual model/node compatibility and production verification are separate from successful JSON construction.
+ExecuteFlow belongs to AI Runtime. Its source/control description is distinct from the existing compiled ExecutionPlan and scheduler-visible Jobs. A future Runtime call to generation could be an explicit internal capability, but that is not required or implemented here.
 
-Reference-image bindings, templates and supported model-specific graphs stay in the generation domain. Mentioning LoRA, ControlNet, video or another graph family in a design is not evidence of current implementation or support.
+## No migration of the old ComfyWorkFlow subsystem
 
-## ExecuteFlow: inference control
+The earlier plan to copy the existing Generation MCP builder/registry into Controller is superseded. Later Generation cleanup should retire that MCP-side implementation after an exact source/tool/caller inventory. Do not interpret this document as an instruction to implement a replacement builder or retain every obsolete subsystem forever.
 
-AI Runtime's ExecuteFlow controls inference and associated execution steps, state, suspension/resumption and registered capabilities where implemented. It is a different execution model and authority. No conversion from every ComfyUI graph to Runtime IR is required or authorized here.
+The removal scope must separate source and dependent tests from saved definitions, asset/input records, credentials, qualification evidence and unresolved provider work. Persistent-data deletion and live cutover are separate decisions. Controller remains unimplemented meanwhile.
 
-A future explicitly requested inference workload may call generation as a bounded internal capability. That is optional integration, not a prerequisite for the Controller, JSON builder, reference images or Studio generation.
+## Future contract constraints
 
-## Internal contract principles
+When separately commissioned, use the smallest contract required by real consumers. Preserve one shared generation state authority, explicit provider selection and honest unavailable/unknown results. A reference or transport reconnect does not authorize a new attempt.
 
-Expose only the operations needed by current callers: discover configured capabilities/definitions, build an execution definition, submit/observe/cancel generation, and manage authorized input/output handles. Exact method names, DTOs, transport, authentication and deployment are not frozen in this document.
+Retained paths keep user authorization, bounded input/output/staging, immutable references, declared output handling, safe errors/provenance and no hidden retry/fallback. Static JSON validity, current provider availability and real generation qualification are different claims. No manual ready flag or weakened protection is introduced by this architecture.
 
-MCP and Studio adapters must share the same underlying generation authority. A result/status projection is not a duplicate scheduler. Provider IDs and generation job IDs must retain their documented meaning; transport reconnection must not mint a new generation attempt after an uncertain outcome.
+## Current phase
 
-Provider-specific details stay in the appropriate adapter. Provider choice remains explicit. Optional provider unavailability does not imply permission to select another provider or activate a GPU runtime.
-
-## Safety belongs to the domain too
-
-Transport separation must not remove existing protections: immutable references, user authorization, input decoding/size limits, staging confinement, bounded transfer, declared outputs, persisted provenance and uncertain-submit fences. Internal callers are not inherently authorized merely because they are internal.
-
-Preserve the distinction between static validation, provider availability, runtime evidence and generation qualification. Existing automated verification requirements are not replaced by human approval or a hand-written ready flag. Do not turn these safeguards into a new inference engine or general platform gate for building JSON.
-
-## Non-goals
-
-No new generic DAG scheduler, inference kernel, Agent-memory service, GPU/systemd manager, cross-provider composition framework, automatic provider fallback or model installation. No new source code, endpoint, service or data migration is implemented by this document.
-
-
-## No code migration of the current ComfyWorkFlow subsystem
-
-The existing Generation MCP ComfyWorkFlow registry/builder implementation is intentionally not an extraction target. When Generation cleanup is later authorized, remove that subsystem from the MCP repository instead of copying it into Controller. This repository remains documentation-only until a separate implementation decision defines the minimal Controller contract and its own implementation.
+Review/fix/merge documentation only. Intelligence cleanup comes first elsewhere. No source extraction/deletion, new framework, API, deployment, provider call, runtime switch or Controller implementation occurs here.

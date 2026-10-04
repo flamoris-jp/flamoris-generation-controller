@@ -1,78 +1,58 @@
 # FLAMORIS Generation Controller
 
-Internal generation controller for FLAMORIS, managing generation providers, ComfyWorkFlows, jobs, inputs, references, and generated assets independently of MCP transport.
+Planned internal generation-domain boundary for FLAMORIS, independent of MCP transport.
 
-**Status: design and documentation only.** No Controller implementation, service endpoint, package, or deployment has been introduced. Existing generation behavior still lives in `flamoris-generation-mcp`; extraction and consumer migration require separate approval.
+**Status: documentation only. Do not implement Controller in the current phase.** No package, endpoint, running service or source migration is provided. The next implementation priority is Intelligence cleanup, coordinated by [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18).
 
-Part of [FLAMORIS AI](https://github.com/flamoris-jp/flamoris-ai). Architecture authority: [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18). Owning design task: [#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
+The existing Generation MCP ComfyWorkFlow subsystem is for later removal from that repository, not transfer here. Creating this repository does not require recreating that subsystem. A future Controller implementation needs a separate minimal scope and explicit authorization.
 
-## What it owns
+## Intended responsibility
 
-The intended internal generation-domain boundary includes:
-
-- configured generation providers, their capabilities and provider adapters;
-- generation-provider ComfyWorkFlow construction, particularly ComfyUI API-format ComfyWorkFlow JSON and declared parameter/input bindings;
-- generation jobs, status, cancellation and results;
-- managed inputs and references, provider staging, generated assets and bounded retrieval;
-- generation-specific validation, existing verification safeguards and normalized provider failures.
-
-Provider selection is explicit. A common interface makes implementations replaceable; it does not imply automatic provider selection, fallback or a new universal scheduler.
-
-## Where it fits
+A future Controller can own configured generation providers/adapters and capability metadata, generation requests/jobs/results, managed inputs/references, staging and generated assets. Concrete API, packaging and deployment decisions remain open in [#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
 
 ```text
-External MCP access:
-ChatGPT -> MCP Hub -> Generation MCP -> Generation Controller -> providers
+Target external path:
+ChatGPT -> MCP Hub -> Generation MCP -> future Controller -> providers
 
-Internal application access:
-Studio ------------------------------> Generation Controller -> providers
+Target internal path:
+Studio ------------------------------> future Controller -> providers
 ```
 
-`flamoris-generation-mcp` is the external MCP adapter. Studio and other internal callers use the Controller's non-MCP contract. That contract's concrete transport and packaging are not decided by this repository's creation.
+MCP exposes external tools; internal callers use a non-MCP contract. Both frontends must eventually use one generation state owner, not independent JobStores/reservations. This diagram does not claim current deployment or mandate a new network hop.
 
-ComfyUI, Irodori and YuE are examples of generation providers, not claims that this new repository already runs them. Actual provider support and qualification remain separately evidenced.
+## Terminology
 
-## ExecuteFlow and ComfyWorkFlow
+| Name | Meaning |
+| --- | --- |
+| `ComfyWorkFlow` | ComfyUI graph / API-format JSON; ComfyUI executes it |
+| `ExecuteFlow` | AI Runtime's inference dependency/data/control flow |
+| `ExecutionPlan` | AI Runtime's existing compiled representation |
 
-| Term | Responsibility | Owner |
-| --- | --- | --- |
-| ComfyWorkFlow | Build a provider execution definition, such as ComfyWorkFlow JSON, from trusted definitions and allowed values | Generation Controller; ComfyUI executes its graph |
-| ExecuteFlow | Control inference, its execution steps and active state | `flamoris-ai-runtime` |
+ComfyWorkFlow is specific to ComfyUI. Other generation providers may use request/recipe contracts without a graph. Neither naming nor MCP separation transfers the ComfyUI builder to AI Runtime. Constructing JSON, submitting it and qualifying real generation are separate operations.
 
-**The ComfyWorkFlow Builder does not move into AI Runtime.** Building JSON does not require an Agent, AI Runtime, MCP Hub, a GPU, or an ExecuteFlow engine. Submitting that JSON to a provider and verifying a production workflow are separate operations with their own prerequisites.
+## Non-goals now
 
-## What it does not own
+No Controller implementation, automatic extraction, replacement builder, new provider, generic scheduler, inference kernel, Agent-memory layer or GPU/systemd control. Agent is optional personality; GPU Node Manager retains host-wide lifecycle authority; Studio retains user authorization and product state.
 
-MCP transport/catalog routing belongs to Generation MCP and MCP Hub. Personality, conversation and memory belong to AI Agent and are optional for generation. Native inference and ExecuteFlows belong to AI Runtime. Host-wide runtime/GPU transitions belong to GPU Node Manager. Studio retains user authorization and product state; ComfyUI retains actual ComfyUI graph execution.
-
-No new generic DAG engine, cross-provider inference bridge, host manager or personality layer is required to extract the existing generation domain.
+ComfyUI, Irodori and YuE are contextual provider examples, not support claims for this empty implementation repository. There are no install/build/run commands, service ports or API routes to configure.
 
 ## Documentation
 
-- [Architecture and boundaries](docs/ARCHITECTURE.md)
-- [Extraction inventory and migration gates](docs/MIGRATION.md)
-- [Contributor guardrails](AGENTS.md)
-- [FLAMORIS organization map](https://github.com/flamoris-jp/.github)
-- [AI ecosystem map](https://github.com/flamoris-jp/flamoris-ai/blob/main/docs/ai-ecosystem.md)
-- [Shared repository policy](https://github.com/flamoris-jp/flamoris-commons/blob/main/docs/repository-policy.md)
-
-There are no install/build/run commands yet. Do not infer a service port, executable, API route or Docker layout from another FLAMORIS repository.
+- [Architecture](docs/ARCHITECTURE.md)
+- [Boundary inventory and deferred cleanup](docs/MIGRATION.md)
+- [Contributor instructions](AGENTS.md)
+- [AI ecosystem](https://github.com/flamoris-jp/flamoris-ai/blob/main/docs/ai-ecosystem.md)
+- [Organization map](https://github.com/flamoris-jp/.github)
+- [Repository policy](https://github.com/flamoris-jp/flamoris-commons/blob/main/docs/repository-policy.md)
 
 ## 日本語
 
-FLAMORIS Generation Controllerは、生成AIの制御をMCPから分離するための内部層です。ComfyWorkFlow JSONの組み立て、生成job、provider adapter、参照入力、生成物を担当する設計です。現在は文書のみで、既存コードの移設・実機変更はしていません。
+Generation Controllerは将来の内部生成制御層です。現在は文書のみで、まだ実装しません。Intelligence整備を先行します。Generation MCPの既存ComfyWorkFlow実装は移植せず、後の削除対象として整理します。同じ仕組みをここで作り直す指示ではありません。
 
-**ComfyUI系の実行定義は `ComfyWorkFlow`、AI Runtimeの推論実行計画は `ExecuteFlow` と呼びます。両者を統合したり、ComfyUIのJSON生成をAI Runtimeへ移したりしません。** Studioは内部APIから、ChatGPTはMCP HubとGeneration MCPを経由して利用します。人格が必要な場合だけAI Agentが関わります。
+ComfyWorkFlowはComfyUI用グラフ・JSON、ExecuteFlowはRuntimeの推論フロー、ExecutionPlanはRuntimeの既存コンパイル済み表現です。内部通信にはMCPを使いません。
 
-## FLAMORIS
+## FLAMORIS and license
 
-FLAMORIS is open-source software for creative work and AI-native production. Commercial use of the licensed code is welcome and does not require individual permission. Software is provided as-is, without guaranteed individual support. Repository documentation, Issues, tests and source are the primary self-support references.
+FLAMORIS is open-source software for creative work and AI-native production. Commercial use of the licensed code is welcome without individual permission. Software is provided as-is without guaranteed individual support; documentation, Issues, tests and source are self-support references.
 
-## License
-
-Code and documentation are licensed under [Apache License 2.0](LICENSE), unless otherwise noted. Models, weights, datasets, media, provider assets and generated outputs may have separate terms; the repository license does not automatically cover them.
-
-
-## Current implementation decision
-
-Do not implement this repository yet. When Generation work is explicitly resumed, the current `flamoris-generation-mcp` ComfyWorkFlow subsystem should be removed from the MCP repository rather than migrated here. Any future Controller ComfyWorkFlow implementation must be designed from the Controller contract at that time. The next implementation priority for FLAMORIS AI is Intelligence boundary cleanup, not this repository.
+Code and documentation are licensed under [Apache License 2.0](LICENSE), unless otherwise noted. Models, weights, datasets, media, provider assets and generated outputs may have separate terms.
