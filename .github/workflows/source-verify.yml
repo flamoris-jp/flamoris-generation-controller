@@ -1,0 +1,23 @@
+name: Temporary source verification
+on: pull_request
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e '.[dev,http]'
+      - run: ruff check --fix .
+        continue-on-error: true
+      - run: ruff format .
+      - name: Formatter patch
+        run: python -c "import subprocess; print('CODEX_FORMAT_DIFF_BEGIN'); print(subprocess.check_output(['git','diff'],text=True)); print('CODEX_FORMAT_DIFF_END')"
+      - run: ruff check .
+        continue-on-error: true
+      - run: pytest
+

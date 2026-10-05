@@ -41,7 +41,7 @@ POST `/api/v1/generation/{operation}` accepts a strict ordinary JSON argument ob
 
 ## Retained behavior and storage
 
-The two builtin Image recipes and configured native Irodori Speech, YuE2 Music and SheetSage2 transcription recipes retain schemas 1/4/5/6, IDs, profiles and limits. Existing `workflows.*`, `workflow_id`, `WorkflowStore` and `FLAMORIS_*` provider/storage keys keep their meaning. Reference-image generation, custom graph registration/versioning/v3/qualification and Runtime delegation remain unavailable.
+The two builtin Image recipes and configured native Irodori Speech, YuE2 Music and SheetSage2 transcription recipes retain schemas 1/4/5/6, IDs, profiles and limits. Existing `workflows.*`, `workflow_id`, `WorkflowStore` and `FLAMORIS_*` provider/storage keys keep their meaning. The separately requested [ComfyWorkFlow registration](docs/COMFY_REGISTRATION.md) adds immutable checkpoint txt2img/img2img profiles and managed reference-image generation using new schema 7. Retired schema 2/3, versioning/v3/qualification and Runtime delegation remain unavailable. Live provider acceptance is still pending.
 
 Reservations are journaled before submission. Unknown acceptance or journal commit remains reserved across disconnect/restart and is never retried or released implicitly. Scoped cancellation, immutable input leases, output roles, archive retrieval, transfer and retention keep their existing protections. Retired active debt stays opaque and reserved. [Migration and rollback](docs/MIGRATION.md) describes unchanged storage and the new ownership lock.
 

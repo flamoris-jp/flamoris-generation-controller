@@ -45,6 +45,15 @@ class Recipe(Request):
     workflow_id: OpaqueID
 
 
+class RegisterComfy(Request):
+    name: Annotated[str, Field(min_length=1, max_length=120)]
+    graph: dict[str, Any]
+
+
+class GetComfy(Request):
+    definition_id: Annotated[str, Field(pattern=r"^comfy-[a-f0-9]{64}$")]
+
+
 class Job(Request):
     job_id: OpaqueID
 
@@ -88,6 +97,8 @@ OPERATIONS: dict[str, type[Request]] = {
     "workflows.list": Request,
     "workflows.build": Build,
     "workflows.save": Recipe,
+    "comfy.register": RegisterComfy,
+    "comfy.get": GetComfy,
     "jobs.submit": Recipe,
     "jobs.status": Job,
     "jobs.result": Job,

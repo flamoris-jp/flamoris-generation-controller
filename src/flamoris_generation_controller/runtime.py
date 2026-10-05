@@ -67,6 +67,7 @@ class GenerationController:
                         workflow_templates=(
                             "text-to-image",
                             "text-to-image-lora",
+                            "registered-comfy",
                         ),
                     ),
                 )
@@ -184,8 +185,8 @@ class GenerationController:
             **self.jobs.activity(),
             "providers": provider_health,
             "managed_input_support": {
-                "ready": False,
-                "reference_execution": "retired",
+                "ready": self.retained_copy_store_available and self.comfyui.input_copies.available(),
+                "reference_execution": "checkpoint-comfy-v1",
                 "retained_copy_store_available": self.retained_copy_store_available
                 and self.comfyui.input_copies.available(),
             },
@@ -237,6 +238,8 @@ class GenerationController:
                 "workflows.list": self.workflows.list,
                 "workflows.build": self.workflows.build,
                 "workflows.save": self.workflows.save,
+                "comfy.register": self.workflows.definitions.register,
+                "comfy.get": self.workflows.definitions.descriptor,
                 "jobs.status": self.jobs.status,
                 "jobs.result": self.jobs.result,
                 "jobs.cancel": self.jobs.cancel,
