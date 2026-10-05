@@ -2,7 +2,7 @@
 
 Updated: 2026-10-05 (JST). Parent decision: [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18); local coordination: [Controller #1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
 
-The user has requested Controller repository setup and implementation-policy preparation first. This document prepares later code work; it does not claim an implemented API, select a port or deploy a service. The previous hold on preparation is superseded. Code extraction starts under a subsequent scoped implementation instruction.
+The user first requested repository/policy preparation and has now explicitly requested Controller implementation. Controller #4 and AI #24 are merged. This source implements the retained domain and matched adapters; source acceptance and live cutover are separate. No live deployment is performed.
 
 ## Goal and bounded scope
 
@@ -20,7 +20,7 @@ The inventory below was read against these current-main revisions. Re-check sour
 | --- | --- | --- |
 | Generation MCP | `02ce5e23f2c6cd311181169e36e58a0eb6eb6ff4` | [Domain and facade](https://github.com/flamoris-jp/flamoris-generation-mcp/tree/02ce5e23f2c6cd311181169e36e58a0eb6eb6ff4/src/flamoris_generation_mcp) |
 | Studio | `deb0dd9f796e3f47b3eb35ed631ea9cacb18ebdd` | [Gateway and product boundary](https://github.com/flamoris-jp/flamoris-studio/tree/deb0dd9f796e3f47b3eb35ed631ea9cacb18ebdd/flamoris_studio) |
-| Controller | `c29d5cff565669c6e0c771e5923f211cdbd0b26f` | [Documentation-only baseline](https://github.com/flamoris-jp/flamoris-generation-controller/tree/c29d5cff565669c6e0c771e5923f211cdbd0b26f) |
+| Controller | `4b6babf08cf7613fc15d71b541a57296790fa4a0` | [Documentation-only baseline](https://github.com/flamoris-jp/flamoris-generation-controller/tree/4b6babf08cf7613fc15d71b541a57296790fa4a0) |
 
 ## Source-to-owner inventory
 
@@ -44,16 +44,16 @@ For example, Studio's image seed range is constrained by browser-safe integers, 
 
 The deleted custom registry/versioning/composition/qualification/v3/Runtime-delegation code is absent from this inventory. It is not a migration source. Existing `WorkflowStore` supports retained recipes across providers and is not deleted merely because of its name.
 
-## Decisions required before extraction
+## Decisions selected before extraction
 
 | Decision | Required result |
 | --- | --- |
-| Packaging and imports | An MCP-free Python domain package with declared dependencies, public values/errors and installed-package checks; namespace/distribution names selected in the code task |
-| Hosting and lifecycle | One constructed domain runtime and one admission owner. First evaluate co-hosting the MCP facade and a non-MCP internal adapter; use a separate process only when justified by the actual lifecycle/callers |
-| Minimum contract | Capability/model/recipe discovery and build/save, submit/status/result/scoped cancel, managed input/upload operations and bounded asset access needed by existing consumers |
-| Trusted caller context | Authenticate each ingress, separate verified provenance from operation permissions, and define what internal callers may access. Studio-owned IDs or an external subject alone grant no access |
-| DTO and failure mapping | Immutable IDs, declared outputs, safe errors and explicit unavailable/busy/unknown semantics; no MCP SDK values in the core or browser protocol |
-| State compatibility | Map current journals, archives, recipe/input/asset identities, copy ledgers and settings; decide cutover/rollback without deleting or duplicating unresolved work |
+| Packaging and imports | `flamoris-generation-controller` / `flamoris_generation_controller`, MCP-free base dependencies; optional `http` extra; installed-package checks |
+| Hosting and lifecycle | One runtime in the existing Generation MCP HTTP process. Both adapters share it; output-root lifetime lock rejects duplicate processes before construction/recovery |
+| Minimum contract | POST `/api/v1/generation/{operation}`, 23 explicitly allowlisted retained operations, strict JSON request models, direct object results and bounded image bytes; see [API.md](API.md) |
+| Trusted caller context | Separate operator service credential authenticates Studio backend and grants the bounded API surface. Studio retains user authorization; MCP ingress supplies only verified non-secret provenance. Context is not a request field |
+| DTO and failure mapping | Existing IDs/output metadata retained; constant HTTP error codes; external ToolError/Image translation remains in facade; no retry/fallback |
+| State compatibility | Existing roots/journals/archive formats remain unchanged. Only `controller-authority/owner.lock` is added; cutover drains/reconciles old versions; see [MIGRATION.md](MIGRATION.md) |
 
 A core package imported by two frontend processes does not make their state shared. Separate JobStores can both admit generation. A shared output directory also does not turn process-local locks into cross-process exclusion. The hosting decision must resolve this before moving code; a distributed scheduler is not part of this scope.
 
@@ -83,6 +83,8 @@ Stages 2–4 must not activate competing old/new authorities during transition. 
 - Studio ownership/CSRF, duplicate-request fences, safe errors, and logout/config/grant changes before dispatch or publication still prevent unauthorized access.
 - Normal checks use fake providers and bounded fixtures; real model quality, GPU readiness and paid calls remain separate acceptance.
 
-## Current preparation result
+## Current source result
 
-README, AGENTS, architecture and this plan define the implementation direction and initial source inventory. Exact DTOs, authentication and hosting decisions remain open; Controller code and Studio/MCP cutover have not begun. Documentation PR/merge and code/live acceptance are recorded separately in AI progress.
+The retained domain is extracted once into Controller. MCP tools use the shared core contract; Studio uses authenticated direct HTTP. The removed custom subsystem is absent. Domain tests moved with pure source; mixed external ingress/protocol tests remain with Generation MCP and import Controller values. API/ownership tests are in Controller, shared MCP/HTTP admission tests in Generation MCP and direct gateway/account tests in Studio.
+
+Review, installed packaging and matched CI evidence are recorded in Controller #1 / AI progress at exact implementation commits. This branch's source does not claim deployment, live model readiness or operational reconciliation.

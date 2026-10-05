@@ -1,71 +1,74 @@
 # FLAMORIS Generation Controller
 
-Shared generation control for FLAMORIS, independent of MCP transport.
+Shared bounded generation processing for Studio and the external Generation MCP facade.
 
-**Status: implementation preparation, 2026-10-05.** The user has selected Controller as the next generation architecture work and requested README/AGENTS setup and implementation-policy updates first. This repository still contains documentation only: no Controller package, API or running service exists. The earlier blanket preparation hold is superseded by this decision; code implementation and deployment are subsequent tasks. See [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18) and [Controller #1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
+**Status: source implementation, 2026-10-05; live cutover pending.** The retained generation domain is now the MCP-free `flamoris_generation_controller` package. [Generation MCP](https://github.com/flamoris-jp/flamoris-generation-mcp) constructs one Controller and exposes its external MCP tools and authenticated internal HTTP API on the same listener. Studio calls the HTTP API directly. See [Controller #1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1) and [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18) for source acceptance.
 
-## Purpose and target paths
-
-Studio and Generation MCP are two callers of the same Controller. Controller owns shared generation processing; it does not relay Studio requests through MCP.
-
-| Caller | Target path, not yet implemented |
+| Caller | Source path |
 | --- | --- |
-| Studio | Studio → non-MCP Controller contract → configured providers |
-| ChatGPT / external MCP client | MCP Hub → Generation MCP facade → the same Controller → configured providers |
+| Studio backend | Authenticated Controller JSON/binary HTTP API → shared Controller → providers |
+| ChatGPT / external MCP | MCP Hub → Generation MCP facade → same Controller → providers |
 
-Both paths use one generation job/input/asset authority and one active-generation reservation. Sharing a Python package alone is insufficient if each frontend creates a separate JobStore. A separate Controller network process is not required by this policy; hosting and internal transport will be selected from the actual callers.
+Controller owns retained recipes, provider adapters and model/capability metadata, jobs/results, managed inputs/uploads/staging, generated assets, transfers and retention. Providers execute. Studio retains accounts/session/CSRF, per-user ownership, opaque mappings, history, request fences and browser delivery. MCP retains tools/annotations, signed-envelope verification and SDK content/errors. GPU Node Manager owns host lifecycle; Runtime owns inference/ExecuteFlow/compiled ExecutionPlan; Agent remains optional.
 
-## Responsibilities
+## Install and library contract
 
-| Owner | Responsibility |
-| --- | --- |
-| Controller | Provider adapters, model/capability metadata, validated generation recipes, requests/jobs/results, managed inputs, staging, generated assets and retention |
-| Generation MCP | External tools, MCP validation/annotations, signed MCP ingress and request/result/content translation |
-| Studio | Accounts/sessions, user authorization, UI/drafts/presets/history, opaque job/asset/input mappings and browser delivery |
-| Providers | Actual media execution and provider-local state |
-| GPU Node Manager | Host-wide runtime/GPU lifecycle |
-| AI Runtime / Agent | Inference and ExecuteFlow / optional personality and conversations, respectively |
+Python 3.11+ and Linux/POSIX local filesystem locking are required. The base package does not require MCP, Hub, Studio or an HTTP server. The optional HTTP adapter uses Starlette:
 
-Implementation starts from the retained, reviewed Generation domain, not a new generation framework. It preserves the two builtin image recipes and configured native Speech, Music and transcription recipes. The removed custom ComfyWorkFlow registry/versioning/v3/qualification/Runtime-bridge subsystem is not an extraction source.
+```sh
+python -m pip install '.[http]'
+```
 
-## Implementation sequence
+```python
+from flamoris_generation_controller.config import Settings
+from flamoris_generation_controller.contracts import CallerContext
+from flamoris_generation_controller.runtime import GenerationController
 
-1. Record the retained-source inventory, smallest non-MCP contract, hosting, trusted caller context and one state owner.
-2. Reuse the retained recipe/provider/job/input/asset code in a transport-independent Controller package, with shared construction and lifecycle.
-3. Connect the external Generation MCP facade to that authority while preserving its reviewed compatibility contracts.
-4. Replace Studio's Generation MCP gateway with the same non-MCP contract; retain Studio ownership and uncertain-request fences.
-5. Verify both callers, packaging, retained state and failure behavior with fake providers; prepare live cutover/rollback separately.
+controller = GenerationController(Settings.from_env())
+try:
+    metadata = await controller.invoke("workflows.list", {}, context=CallerContext.internal())
+finally:
+    await controller.close()
+```
 
-The [implementation plan](docs/IMPLEMENTATION.md) defines the inventory, open decisions and acceptance criteria. Splitting responsibilities does not itself add reference-image generation, arbitrary graph registration, new providers or automatic GPU switching.
+Construct the runtime once per generation authority, never per caller/request. A lifetime ownership lock rejects a second runtime for the same output root before provider construction or journal recovery. It does not coordinate different storage roots/hosts or own the GPU. Library callers are trusted authority-process code; HTTP callers must authenticate.
 
-## Terminology
+## Internal HTTP API
 
-| Name | Meaning |
-| --- | --- |
-| `ComfyWorkFlow` | ComfyUI graph / API-format JSON; ComfyUI executes it |
-| `ExecuteFlow` | AI Runtime's inference dependency/data/control flow |
-| `ExecutionPlan` | AI Runtime's existing compiled representation |
+The initial host is Generation MCP's existing HTTP listener; an extra daemon or port is unnecessary. Configure the private operator `FLAMORIS_CONTROLLER_TOKEN` with 32–512 printable ASCII credential characters. An unset token disables internal operations. Studio uses the same private value as `STUDIO_GENERATION_TOKEN` and sets `STUDIO_GENERATION_ENDPOINT` to the exact `/api/v1/generation` base. `STUDIO_GENERATION_NAMESPACE` must be empty. External Hub/MCP credentials and provenance signatures are separate.
 
-Non-ComfyUI requests remain generation recipes. Preserve current identifiers such as `WorkflowStore`, `workflows.*` and `workflow_id` until a reviewed compatibility change. JSON construction, submission and real provider acceptance are separate stages.
+POST `/api/v1/generation/{operation}` accepts a strict ordinary JSON argument object. Results are JSON objects, except `assets.get`, which returns bounded image bytes. No MCP envelope, SDK object, identity header or caller-provided provenance enters this contract. The configured service credential grants the trusted backend the bounded operation surface; Studio still enforces all user ownership. See [API contract](docs/API.md).
 
-## Documentation
+## Retained behavior and storage
+
+The two builtin Image recipes and configured native Irodori Speech, YuE2 Music and SheetSage2 transcription recipes retain schemas 1/4/5/6, IDs, profiles and limits. Existing `workflows.*`, `workflow_id`, `WorkflowStore` and `FLAMORIS_*` provider/storage keys keep their meaning. Reference-image generation, custom graph registration/versioning/v3/qualification and Runtime delegation remain unavailable.
+
+Reservations are journaled before submission. Unknown acceptance or journal commit remains reserved across disconnect/restart and is never retried or released implicitly. Scoped cancellation, immutable input leases, output roles, archive retrieval, transfer and retention keep their existing protections. Retired active debt stays opaque and reserved. [Migration and rollback](docs/MIGRATION.md) describes unchanged storage and the new ownership lock.
+
+## Development and evidence
+
+```sh
+python -m pip install -e '.[dev,http]'
+ruff check .
+ruff format --check .
+pytest
+python -m build
+```
+
+Normal tests use fake providers, bounded media and isolated storage. They exercise original domain behavior, authentication/permissions/bounds, duplicate processes, shared admission and unknown/restart/no-replay. Generation MCP and Studio own their adapter/integration and account-isolation tests. Installed-wheel checks import core without MCP. These checks do not attest real GPU/model readiness or deploy anything.
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [Implementation plan and retained-source inventory](docs/IMPLEMENTATION.md)
-- [Retirement baseline, state continuity and cutover](docs/MIGRATION.md)
-- [Contributor and AI-agent instructions](AGENTS.md)
+- [Implementation inventory and decisions](docs/IMPLEMENTATION.md)
+- [API contract](docs/API.md)
+- [Migration and rollback](docs/MIGRATION.md)
+- [Contributor instructions](AGENTS.md)
 - [AI progress](https://github.com/flamoris-jp/flamoris-ai/blob/main/PROGRESS.md)
-- [AI ecosystem](https://github.com/flamoris-jp/flamoris-ai/blob/main/docs/ai-ecosystem.md)
 - [Repository policy](https://github.com/flamoris-jp/flamoris-commons/blob/main/docs/repository-policy.md)
 
 ## 日本語
 
-Generation Controllerは、StudioとGeneration MCPの両方から呼ばれる共通の生成制御層です。StudioとMCPを直列につなぐ中継ではなく、生成Job/Input/Assetと実行予約を一つに保ちます。
+StudioとGeneration MCPが、同じControllerの生成処理・実行予約を使う実装です。Studioは認証付きHTTP APIへ直接接続し、MCPには外部向けの変換処理を残します。元の生成機能と保存形式は維持し、旧独自ComfyWorkFlow機能は復活させていません。実機への反映・既存実行の整理・provider受け入れは別の作業です。
 
-2026-10-05の指示で、README・AGENTSと実装方針の整備へ進みました。ソースはまだ未実装です。現在残っている基本/native生成を再利用し、MCPには外部入口、Studioにはユーザー権限と画面・履歴を残します。具体的なコード実装、実機切替、新しい参照画像機能は後続の作業です。
+## License and support
 
-## FLAMORIS and license
-
-FLAMORIS is open-source software for creative work and AI-native production. Commercial use of the licensed code is welcome without individual permission. Software is provided as-is without guaranteed individual support; documentation, Issues, tests and source are self-support references.
-
-Code and documentation are licensed under [Apache License 2.0](LICENSE), unless otherwise noted. Models, weights, datasets, media, provider assets and generated outputs may have separate terms.
+Code and documentation are [Apache-2.0](LICENSE) unless otherwise stated. Retained domain source originates from FLAMORIS Generation MCP. Models, datasets, media and provider/generated assets may have separate terms. FLAMORIS is provided as-is without guaranteed individual support.
