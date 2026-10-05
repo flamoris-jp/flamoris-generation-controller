@@ -1,30 +1,42 @@
 # Contributor and AI-agent instructions
 
-This repository documents a future internal generation-domain controller. It has no Controller implementation. Read README.md, docs/ARCHITECTURE.md, docs/MIGRATION.md and [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18).
+This repository is the planned owner of FLAMORIS generation-domain code. It currently contains documentation only. Read README.md, docs/ARCHITECTURE.md, docs/IMPLEMENTATION.md, docs/MIGRATION.md, current [AI progress](https://github.com/flamoris-jp/flamoris-ai/blob/main/PROGRESS.md), [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18) and [Controller #1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
 
-## Current authorization
+## Current task and sequencing
 
-Documentation review/fixes and explicitly requested documentation merges are permitted in Chat. Do not implement Controller, delegate Controller work to Work, migrate/delete source, deploy, restart, change credentials or run providers. Documentation merge is not implementation resumption. The Intelligence cleanup elsewhere is implemented; check current progress before ordering new work.
+The latest 2026-10-05 user decision requests Controller README/AGENTS setup and implementation-policy preparation in Controller and FLAMORIS AI. This supersedes the earlier blanket hold on Controller preparation. The current task is documentation, source inventory, issue alignment and reviewable PRs; it does not implement Controller or change caller source.
 
-## Fixed boundaries
+Subsequent code work follows the user's scoped implementation instruction and the plan below. These instructions are not a permanent ban on Controller development. Do not infer code or live-operation authorization from merging documentation. User instructions govern scope; existing session authorization does not need to be requested again.
 
-1. Generation MCP is an external adapter. Internal application/service calls use non-MCP contracts, not MCP Hub.
-2. `ComfyWorkFlow` means ComfyUI graph/API-format JSON. `ExecuteFlow` means Runtime inference flow; `ExecutionPlan` remains the Runtime's compiled representation. Do not use bare `Workflow` for a new FLAMORIS design concept. Preserve exact current identifiers and historical quotations when required for truthful documentation.
-3. The existing Generation MCP ComfyWorkFlow subsystem is not a migration source for this repository. Its custom registry/v3/Runtime-bridge removal is implemented in Generation #69 and matched consumers; do not automatically recreate it here.
-4. Other provider requests are not automatically ComfyWorkFlow. Provider execution stays with the provider. No generic inference or scheduling platform is inferred from generation requests.
-5. Agent is optional personality/conversation/memory. GPU Node Manager retains host lifecycle authority. Studio retains product state and user authorization.
-6. Future internal and external callers must share one generation state owner, not per-frontend stores/reservations.
+## Dependency and ownership rules
 
-## Design and retained safety
+1. Studio and the external Generation MCP facade call one shared Controller authority through non-MCP contracts. Controller must not depend on MCP SDK objects, Hub or a Studio package.
+2. Controller owns retained generation recipes, provider adapters/model/capability metadata, jobs/results, managed inputs/staging, generated assets and retention. Providers perform actual execution.
+3. MCP tools/annotations, wire validation, MCP signed-envelope ingress, ToolError and binary content mapping remain with Generation MCP. Split trusted provenance data from MCP middleware.
+4. Studio retains authentication, CSRF, per-user ownership, opaque mappings, UI/drafts/presets/history, bounded browser publication and response-time access rechecks. An upstream ID or provenance subject is not an authorization grant.
+5. GPU Node Manager retains host-wide lifecycle. AI Runtime retains inference, ExecuteFlow and compiled ExecutionPlan. Agent retains optional personality/conversations. Controller does not acquire these state machines.
+6. Reuse the retained reviewed source. Do not restore the deleted custom ComfyWorkFlow registration/versioning/v3/qualification/Runtime-delegation subsystem, introduce a generic scheduler, or add new providers/reference-image features as part of separation.
 
-Before any future implementation, inspect actual source/tests/callers and record exact retained versus removed behavior. Do not invent endpoints, ports, dependencies, formats or commands. Source retirement is not deletion of assets, saved definitions, user data, evidence or unresolved jobs.
+## Contract and state continuity
 
-Retained paths must keep authorization, immutable inputs, bounded decoding/staging/transfer, safe paths and errors, provenance and no replay of uncertain submissions. Do not silently restore a removed feature through fallback, bypass checks or fabricate successful execution. Separate JSON validity, provider availability, qualification and authorization.
+Before code extraction, settle the minimum request/result/error/context contract, packaging/hosting and one reservation owner in Controller #1. Library reuse in independent processes must not produce independent JobStores, locks or journals; sharing a storage directory does not provide cross-process exclusion. Consider co-hosting the facade and internal adapter before adding a network process.
 
-Credentials stay in operator configuration, not browser inputs, persona text, prompts, public errors or repository files. No arbitrary shell/URLs/paths, model downloads or implicit GPU activation.
+Preserve existing IDs, data/storage identities, declared output roles, bounded inputs/staging/transfer, input-use leases, retention and non-secret provenance. Separate transport settings from provider/storage settings. Existing `WorkflowStore`, `workflows.*`, `workflow_id`, schemas and configuration literals keep their exact names until a tested compatibility decision.
 
-## Review
+Journal reservations before provider submission. Ambiguous acceptance, failed acknowledgement or uncertain journal commit stays unknown/reserved; do not replay, auto-fallback or release on reconnect/restart. Cancellation must target owned work and confirm a terminal outcome. Retired active debt and its original journals remain protected until reconciliation by the previous matched authority.
 
-Use focused documentation commits. Read the resulting text for contradictions, not only keyword replacement. Merge only with explicit authorization. Do not claim runtime tests or live qualification from a documentation-only change. Keep the design Issue open for its remaining deliverables.
+Authenticate trusted caller context at each ingress and enforce the selected authorization contract before effects. Keep credentials in operator configuration and out of browser data, persona text, prompts, public errors and repository files. No arbitrary shell/URLs/paths, hidden downloads or implicit GPU activation.
 
-Follow the [repository policy](https://github.com/flamoris-jp/flamoris-commons/blob/main/docs/repository-policy.md). Keep public documentation portable; preserve licenses and third-party/model terms. Do not force-push shared branches.
+## Implementation and checks
+
+For a later code task, inspect current Generation/Studio source, tests and owner instructions at fixed revisions; the recorded inventory is a starting point, not proof the source has not changed. Keep focused stages: core/lifecycle and state ownership, external MCP compatibility, then Studio gateway replacement. Update affected owner documentation with each code change.
+
+Use fake providers and bounded fixtures in normal CI. Verify MCP-free core imports/installed packaging, one admission authority across both callers, unknown/restart/no-replay behavior, scoped cancellation, immutable inputs, output metadata, provenance, retained records and Studio account isolation. Contract extraction does not prove live model/GPU readiness.
+
+The current documentation task checks local links, exact source identifiers, dependency direction, as-built/target status and diff whitespace. Do not claim runtime tests from this change. Keep Controller #1 open while contract decisions and implementation remain pending; preserve prior PR/Issue evidence.
+
+## Operations and repository practice
+
+Live deployment, runtime changes, data/grant/credential mutation, paid calls and reference-image expansion are separate scopes. Use flamoris-server-manager for current infrastructure facts when an operational task requires them.
+
+Use focused commits and review final text/code. Merges require explicit user authorization; respect authorization already given for the applicable task. Do not force-push shared branches. Follow the [repository policy](https://github.com/flamoris-jp/flamoris-commons/blob/main/docs/repository-policy.md), keep public documentation portable and preserve licenses and model/provider terms.

@@ -1,53 +1,38 @@
-# Retirement baseline and future ownership
+# Retained domain separation and state continuity
 
-Parent: [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18). Local scope:
-[#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
-This filename is retained for existing links. Controller is documentation-only;
-there is no package, running endpoint or source migration to configure.
+Parent: [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18). Local scope: [Controller #1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1). The 2026-10-05 decision begins implementation preparation; this repository still has no package or running endpoint. Follow [IMPLEMENTATION.md](IMPLEMENTATION.md) for the staged source plan.
 
-## Implemented source baseline
+## Source baseline
 
-- Intelligence #12 supplies the shared non-MCP provider library. Agent #40 uses it
-  directly and exposes the internal HTTP API. Studio #63 uses the library for raw
-  inference and Agent HTTP for personality/conversations.
-- Generation #69 removes custom definition registration/versioning/bindings,
-  qualification, v3 composition and the Runtime-delegation bridge. Hub #37 removes
-  their tools; Studio #63 removes their dispatch; Runtime #25 removes its matching
-  media lowering. These features are retired, not transferred here.
-- The original two schema-1 ComfyUI templates and opt-in schema-4 Speech, schema-5
-  Music and schema-6 transcription recipes remain. Generation currently co-locates
-  their domain logic and external facade. Studio generation still uses that MCP
-  compatibility path; it has not already cut over to Controller.
+- Intelligence #12, Agent #40 and Studio #63 implemented the internal Intelligence/Agent non-MCP paths.
+- Generation #69/#70 and matched Studio/Hub/Runtime changes retired custom definition registration/versioning, qualification, v3 composition and the Runtime-delegation bridge. Their source deletion is complete and is not repeated or transferred here.
+- The two schema-1 builtin ComfyUI templates and configured schema-4 Speech, schema-5 Music and schema-6 transcription recipes remain. Their recipe/provider/job/input/asset domain is currently co-located with the external Generation MCP facade. Studio still calls that MCP compatibility path.
 
-See the owning [Generation retirement contract](https://github.com/flamoris-jp/flamoris-generation-mcp/blob/main/docs/LEGACY_RETIREMENT.md)
-and [AI progress](https://github.com/flamoris-jp/flamoris-ai/blob/main/PROGRESS.md)
-for reviewed revisions, evidence and operational holds.
+The new ownership work reuses this retained domain. It does not reinstate the retired subsystem. See the [retirement contract](https://github.com/flamoris-jp/flamoris-generation-mcp/blob/main/docs/LEGACY_RETIREMENT.md) and [AI progress](https://github.com/flamoris-jp/flamoris-ai/blob/main/PROGRESS.md) for accepted source and operational status.
 
-## Future contract decisions
+## Source separation
 
-| Retained concern | Ownership decision still required |
+| Concern | Destination |
 | --- | --- |
-| External MCP tools/annotations/content translation | Remain the external Generation facade |
-| Provider/capability metadata and adapters | Candidate Controller contract; use actual retained consumers, no wholesale copy |
-| Recipe construction, jobs/status/cancel/results | One shared domain authority; decide library/service packaging and DTOs |
-| Managed inputs, historical copy ledgers, assets and transfer | Preserve ownership, storage identity, bounds and retention; no data deletion |
-| Host lifecycle and runtime facts | Remain with GPU Node Manager/provider/deployment owners |
-| ExecuteFlow and compiled ExecutionPlan | Remain with AI Runtime |
+| Retained recipe construction and validation, provider/model/capability adapters, jobs/results | Controller core, with one construction/lifecycle owner |
+| Managed inputs, upload publication, staging/copy ledgers, generated assets, bounded transfer and retention | Same Controller state authority; preserve storage and immutable identities |
+| External MCP tools/annotations, SDK content/errors and signed-envelope verification | Generation MCP facade |
+| Verified provenance data and safe domain errors | Transport-independent core contract; ingress remains with each adapter |
+| Studio session/CSRF/ownership, history/presets, opaque mappings, request fences and browser delivery | Studio; replace its upstream transport without moving product state |
+| Host lifecycle / Runtime inference / Agent conversations | Existing GPU Node Manager / Runtime / Agent owners |
 
-A later Controller task needs its own minimal scope and explicit authorization.
-It must not recreate custom registration, qualification, composition or an internal
-MCP service bus. Names such as `WorkflowStore` describe retained recipe support,
-including non-ComfyUI providers, and are not grounds for indiscriminate deletion.
+## Reservation and data continuity
 
-## Data, uncertainty and acceptance
+Source separation is not persistent-data deletion. Preserve saved recipes/definitions, user assets/inputs, grants, provider copy ledgers, historical evidence and active journals. Record the mapping of IDs, storage roots/namespaces, archive formats and configured providers before a future cutover; do not invent a rename in documentation.
 
-Saved definitions/recipes, user assets/inputs, grants, historical evidence and
-active journals remain intact. New Generation source refuses old custom execution
-and preserves opaque active debt without polling, replaying, cancelling or releasing
-its busy reservation. Reconcile that work with the previous matched authority before
-an operational upgrade; a missing provider record is insufficient proof of release.
+Only one process or otherwise explicitly designed authority can own live generation admission. Do not run old and new owners against one output directory, or copy unresolved active work into independent per-frontend stores. Provider acceptance or durable-write uncertainty keeps the reservation unknown; restart, timeout or missing queue records do not prove release.
 
-Source tests establish retained contracts, not live GPU/model/host readiness.
-Controller implementation, real generation, cutover, rollback and persistent-data
-changes are separate tasks. Historical Generation #19/#42, #30, #25/#31 and v3
-records stay in Git/Issue history and do not act as current implementation orders.
+Retired custom/delegated active debt stays opaque: preserve its original journal and busy reservation without new polling, replay, cancellation or release. Reconcile using the previous matched authority before an operational upgrade. Keep input-use protection and terminal-state release consistent with generation reservations.
+
+## Staged cutover and rollback
+
+Later source PRs introduce the MCP-free core, connect the external facade and then replace Studio's gateway against the same authority. Preserve the supported external tools, literal IDs/configuration and retained provider behavior, or explicitly version any unavoidable compatibility change. Never hide a fallback to the retired feature or an uncertain resubmission.
+
+Operational planning separately inventories installed versions, active work, backups and restore/rollback conditions. Drain or reconcile the previous authority before activating its replacement. Rollback must also keep one owner and verify data/format compatibility; restarting an old process is not automatically safe after state changes.
+
+Normal contract tests use fake providers. Deployment, configuration/data changes, live GPU/model tests and paid calls are not part of the current documentation task. Neither source extraction nor this plan certifies real generation quality or host readiness.
