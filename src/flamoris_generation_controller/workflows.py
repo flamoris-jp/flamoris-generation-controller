@@ -79,7 +79,16 @@ class Recipe(BaseModel):
     parameters: Parameters
 
 
-AnyRecipe = Recipe | SpeechRecipe | MusicRecipe | TranscriptionRecipe
+class RegisteredRecipe(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    schema_version: Literal[7] = 7
+    template: Literal["registered-comfy"] = "registered-comfy"
+    definition_id: str = Field(pattern=r"^comfy-[a-f0-9]{64}$")
+    parameters: Parameters
+    reference_image: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
+
+
+AnyRecipe = Recipe | RegisteredRecipe | SpeechRecipe | MusicRecipe | TranscriptionRecipe
 NATIVE_RECIPES = (SpeechRecipe, MusicRecipe, TranscriptionRecipe)
 
 
@@ -268,6 +277,9 @@ class WorkflowStore:
         self.speech_enabled = speech_enabled
         self.music_enabled = music_enabled
         self.transcription_enabled = transcription_enabled
+        from .registered_comfy import ComfyDefinitions
+
+        self.definitions = ComfyDefinitions(directory)
 
     def build(
         self,
@@ -283,7 +295,13 @@ class WorkflowStore:
             definition_version is not None and type(definition_version) is not int
         ):
             raise ValueError("Invalid build preconditions")
-        if definition_version is not None or definition_digest is not None or require_ready:
+        registered = template.startswith("comfy-")
+        if registered:
+            if definition_version not in (None, 1) or definition_digest not in (None, template[6:]):
+                raise ValueError("ComfyWorkFlow definition pin mismatch")
+            if require_ready:
+                raise ValueError("Live ComfyWorkFlow qualification is not available")
+        elif definition_version is not None or definition_digest is not None or require_ready:
             raise RetiredRecipeError(
                 "Custom definitions and attestation are retired; use builtin recipes"
             )
@@ -292,7 +310,11 @@ class WorkflowStore:
             MUSIC_TEMPLATE: (self.music_enabled, MusicRecipe),
             TRANSCRIPTION_TEMPLATE: (self.transcription_enabled, TranscriptionRecipe),
         }
-        if template in native:
+        if registered:
+            recipe = self.definitions.build(template, parameters)
+            self.catalog.require("checkpoint", recipe.parameters.checkpoint)
+            prompt = self.definitions.prompt(recipe)
+        elif template in native:
             enabled, recipe_type = native[template]
             if not enabled:
                 raise ValueError("Native recipe is disabled")
@@ -345,6 +367,8 @@ class WorkflowStore:
             raise ValueError("Invalid recipe schema")
         if schema in (2, 3):
             raise RetiredRecipeError("Custom ComfyWorkFlow recipe execution is retired")
+        if schema == 7:
+            return RegisteredRecipe.model_validate(data)
         native = {
             4: (self.speech_enabled, SpeechRecipe),
             5: (self.music_enabled, MusicRecipe),
@@ -367,13 +391,16 @@ class WorkflowStore:
             }[type(recipe)]
             if not enabled:
                 raise ValueError("Native recipe is disabled")
-        elif not isinstance(recipe, Recipe):
+        elif not isinstance(recipe, (Recipe, RegisteredRecipe)):
             raise RetiredRecipeError("Custom ComfyWorkFlow recipe execution is retired")
 
     def prompt(self, recipe: AnyRecipe, job_id: str | None = None) -> dict:
         if isinstance(recipe, NATIVE_RECIPES):
             raise ValueError("Native recipe has no ComfyUI prompt")
         self._require_supported_recipe(recipe)
+        if isinstance(recipe, RegisteredRecipe):
+            self.catalog.require("checkpoint", recipe.parameters.checkpoint)
+            return self.definitions.prompt(recipe, job_id)
         prompt = build_prompt(recipe, self.catalog)
         if job_id is not None:
             prompt["7"]["inputs"]["filename_prefix"] = f"flamoris/{job_id}"
@@ -414,8 +441,8 @@ class WorkflowStore:
         # executes/reinterprets/deletes them; get/build report explicit retirement.
         result = {
             "templates": TEMPLATES,
-            "descriptors": descriptors,
-            "definitions": [],
+            "descriptors": descriptors + self.definitions.list(),
+            "definitions": self.definitions.list(),
             "built_workflows": list(self._recipes),
             "saved_workflows": saved,
         }

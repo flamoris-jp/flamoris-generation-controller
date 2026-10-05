@@ -4,8 +4,9 @@ import logging
 from pathlib import Path
 
 from ..comfyui import ComfyUIClient
+from ..image_decode import decode_image
 from ..models import ModelCatalog
-from ..workflows import Recipe, WorkflowStore, build_prompt
+from ..workflows import Recipe, RegisteredRecipe, WorkflowStore, build_prompt
 from .base import (
     GenerationRequest,
     JobSnapshot,
@@ -78,7 +79,9 @@ class ComfyUIProvider:
         )
 
     async def submit(self, request: GenerationRequest, job_id: str) -> ProviderJob:
-        if request.operation != "image.generate" or not isinstance(request.payload, Recipe):
+        if request.operation != "image.generate" or not isinstance(
+            request.payload, (Recipe, RegisteredRecipe)
+        ):
             raise SubmissionRejected("ComfyUI supports only retained builtin image recipes")
         try:
             if self.workflows is not None:
@@ -88,11 +91,53 @@ class ComfyUIProvider:
                 prompt["7"]["inputs"]["filename_prefix"] = f"flamoris/{job_id}"
         except ValueError as exc:
             raise SubmissionRejected(str(exc)[:300]) from exc
-        # No custom graph/managed-reference injection and no retry after an
-        # uncertain POST. ComfyUIClient preserves the accepted/unknown distinction.
+        if isinstance(request.payload, RegisteredRecipe) and request.payload.reference_image:
+            return await self._submit_reference(request.payload, prompt, job_id)
         execution_id = await self.client.submit(prompt, job_id)
         self._output_nodes[execution_id] = "7"
         return ProviderJob(execution_id=execution_id)
+
+    async def _submit_reference(self, recipe, prompt, job_id):
+        if (
+            self.managed_inputs is None
+            or self.input_copies is None
+            or not self.input_copies.available()
+        ):
+            raise SubmissionRejected("Managed reference image storage is not available")
+        posted = False
+        try:
+            async with self.managed_inputs.stage(
+                job_id,
+                {"reference_image": recipe.reference_image},
+                {"reference_image": {"image/png", "image/jpeg", "image/webp"}},
+            ) as readers:
+                reader = readers["reference_image"]
+                data = bytearray()
+                async for part in reader.chunks():
+                    data.extend(part)
+                    if len(data) > 8 * 1024**2:
+                        raise ValueError("Reference image exceeds byte limit")
+                payload = bytes(data)
+                decode_image(payload, reader.metadata["mime_type"])
+                name = self.input_copies.stage(job_id, payload, reader.metadata["mime_type"])
+                prompt["8"]["inputs"]["image"] = name
+                self.input_copies.before_post(job_id)
+                posted = True
+                execution_id = await self.client.submit(prompt, job_id)
+                self._output_nodes[execution_id] = "7"
+                self.input_copies.bind(job_id, execution_id)
+                return ProviderJob(execution_id, {"reference_image": dict(reader.metadata)})
+        except BaseException as exc:
+            if not posted or isinstance(exc, SubmissionRejected):
+                try:
+                    self.input_copies.rejected(job_id)
+                except (OSError, ValueError):
+                    logger.warning("Rejected reference copy requires reconciliation")
+                if isinstance(exc, Exception):
+                    raise SubmissionRejected(
+                        "Reference image staging or validation rejected"
+                    ) from None
+            raise
 
     def _normalize(self, execution_id: str, raw: dict) -> JobSnapshot:
         status = raw.get("status")

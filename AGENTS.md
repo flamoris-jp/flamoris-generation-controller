@@ -10,6 +10,12 @@ The selected initial host is one Controller object inside the Generation MCP HTT
 
 ## Dependency and ownership rules
 
+The subsequent explicit 2026-10-05 request authorizes source implementation and
+review for ChatGPT ComfyWorkFlow registration and reference-image generation
+under Controller #6. Follow docs/COMFY_REGISTRATION.md. This new bounded profile
+supersedes the reference-feature hold only for this request; old schema 2/3,
+versioning/v3/Runtime delegation and live rollout remain separate.
+
 1. Studio and the external Generation MCP facade call one shared Controller authority through non-MCP contracts. Controller must not depend on MCP SDK objects, Hub or a Studio package.
 2. Controller owns retained generation recipes, provider adapters/model/capability metadata, jobs/results, managed inputs/staging, generated assets and retention. Providers perform actual execution.
 3. MCP tools/annotations, wire validation, MCP signed-envelope ingress, ToolError and binary content mapping remain with Generation MCP. Split trusted provenance data from MCP middleware.
