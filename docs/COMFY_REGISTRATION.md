@@ -65,7 +65,7 @@ a definite rejection or observed terminal provider outcome.
 Source tests use synthetic images and fake ComfyUI HTTP. Actual model/GPU success
 remains unverified until separately requested deployment acceptance. Install the
 matched Controller/Generation facade and refresh the Hub's 25-tool catalog.
-Configure the existing shared `FLAMORIS_COMFYUI_INPUT_ROOT` explicitly for reference
+Configure the existing shared `COMFYUI_INPUT_ROOT` explicitly for reference
 execution. Studio's existing builtin Image UI remains on its retained contract;
 the new external ChatGPT path does not add a Studio Image editor feature.
 
