@@ -19,7 +19,9 @@ POST `/api/v1/generation/{operation}` with `Content-Type: application/json` and 
 | `system.health` | `{}` | Provider health, current reservation and API/ownership metadata |
 | `capabilities.list`, `capabilities.get` | `{}` / `capability_id` | Configured capability metadata |
 | `models.list`, `models.get` | Optional `kind` / `model_id` | Installed model metadata |
-| `workflows.list`, `workflows.build`, `workflows.save` | `{}` / `template`, `parameters` / `workflow_id` | Retained recipe catalog, built recipe or saved recipe |
+| `comfy.register` | `name`, `graph` | Immutable bounded checkpoint graph definition, digest, defaults and static validation metadata |
+| `comfy.get` | `definition_id` | Digest-checked registered graph definition and defaults |
+| `workflows.list`, `workflows.build`, `workflows.save` | `{}` / `template`, `parameters`, optional `definition_digest` / `workflow_id` | Graph-free builtin/registered recipe catalog, built recipe or saved recipe |
 | `jobs.submit` | `workflow_id` | Admitted job ID/status |
 | `jobs.status`, `jobs.result`, `jobs.cancel` | `job_id` | Job observation/result/scoped cancellation |
 | `assets.list` | `job_id` | Generated asset metadata |
@@ -31,7 +33,12 @@ POST `/api/v1/generation/{operation}` with `Content-Type: application/json` and 
 | `inputs.upload.write` | `upload_id`, `offset`, `data_base64`, `chunk_sha256` | Ordered digest-checked acknowledgement |
 | `inputs.upload.finish` | `upload_id` | Immutable uploaded-image metadata |
 
-Exact strict request models are in [`contracts.py`](../src/flamoris_generation_controller/contracts.py). Retained recipe, output and archive structures are unchanged; consumers still validate results. Optional old definition/readiness arguments to build reject explicitly; they do not enable retired features.
+The current allowlist contains 25 operations: 23 retained operations plus
+`comfy.register/get`. Registered checkpoint txt2img/img2img builds use schema 7
+and the definition digest; see [COMFY_REGISTRATION.md](COMFY_REGISTRATION.md).
+Old schema 2/3 and their registration/verification/v3 tools remain retired.
+
+Exact strict request models are in [`contracts.py`](../src/flamoris_generation_controller/contracts.py). Retained recipe, output and archive structures are unchanged; consumers still validate results. The definition digest applies to the new registered profile. Legacy definition-version/readiness arguments do not enable retired schemas, qualification or versioning and reject unsupported use explicitly.
 
 Model identifiers keep `kind:relative_filename`: the retained filename limit is 1024 UTF-8 bytes, and `models.get` allows the kind prefix in addition (at most 1040 characters). A model returned by `models.list` remains inspectable even when its nested relative path exceeds the generic opaque-ID bound.
 

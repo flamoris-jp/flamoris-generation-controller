@@ -4,7 +4,7 @@ This repository is the owner of FLAMORIS generation-domain code. It contains the
 
 ## Current task and sequencing
 
-The latest 2026-10-05 user instruction explicitly requests Controller implementation. It authorizes retained-domain extraction, matched Generation MCP/Studio integration, tests, review/fixes and reviewable PRs. This supersedes the documentation-only preparation hold. Live cutover, data/grants/credentials, paid calls and new generation features remain separate scopes. Merges require applicable explicit user authorization.
+Controller extraction and the subsequent bounded ComfyWorkFlow registration/reference-image profile are accepted in main through Controller #5/#7 and matched callers, after explicit merge instructions. See AI PROGRESS §4.8/§4.9. The current request aligns documentation and postpones live acceptance. Live cutover, data/grants/credentials, paid calls and further generation features remain separate scopes. Future merges require applicable explicit user authorization.
 
 The selected initial host is one Controller object inside the Generation MCP HTTP process, shared by external MCP and authenticated internal HTTP adapters. The output-root lifetime ownership lock must be acquired before provider construction or recovery. Keep the exact API/service-permission decisions in docs/API.md and Controller #1; never create another runtime per caller/session.
 
@@ -39,7 +39,7 @@ For further code work, inspect current Generation/Studio source, tests and owner
 
 Use fake providers and bounded fixtures in normal CI. Verify MCP-free core imports/installed packaging, one admission authority across both callers, unknown/restart/no-replay behavior, scoped cancellation, immutable inputs, output metadata, provenance, retained records and Studio account isolation. Contract extraction does not prove live model/GPU readiness.
 
-Run core/domain/API tests, lint/format and installed-wheel checks without MCP. Matched facade/Studio CI covers protocol compatibility, shared admission and two-account isolation. Keep Controller #1 open until source acceptance; record operational acceptance separately and preserve previous evidence.
+Run core/domain/API tests, lint/format and installed-wheel checks without MCP. Matched facade/Studio CI covers protocol compatibility, shared admission and two-account isolation. Controller #1 source acceptance is recorded; preserve its evidence and record pending operational acceptance separately under AI #18.
 
 ## Operations and repository practice
 

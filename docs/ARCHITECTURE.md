@@ -37,7 +37,7 @@ The existing builtin image and native Speech/Music/transcription recipe paths ar
 
 Generation #69/#70 removed custom registry/versioning, composition/v3, qualification and Runtime delegation. Those deleted subsystems are not copied or rebuilt. Existing `WorkflowStore` and `workflow_id` describe retained generation recipes, including non-ComfyUI providers.
 
-A ComfyWorkFlow is ComfyUI API-format graph/JSON; ComfyUI executes it. ExecuteFlow and compiled ExecutionPlan remain Runtime concepts. Constructing a bounded image graph requires neither an Agent nor a Runtime bridge. Reference-image generation and new custom-graph features require separate product scope.
+A ComfyWorkFlow is ComfyUI API-format graph/JSON; ComfyUI executes it. ExecuteFlow and compiled ExecutionPlan remain Runtime concepts. Constructing a bounded image graph requires neither an Agent nor a Runtime bridge. The subsequent [bounded registration profile](COMFY_REGISTRATION.md) implements immutable checkpoint txt2img/img2img graphs and managed initial images (schema 7), accepted in Controller #7. Arbitrary custom nodes, IPAdapter/ControlNet, new model families and further features require separate scope; live acceptance remains pending.
 
 ## One state owner and trusted ingress
 

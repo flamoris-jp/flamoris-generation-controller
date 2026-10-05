@@ -44,13 +44,18 @@ For example, Studio's image seed range is constrained by browser-safe integers, 
 
 The deleted custom registry/versioning/composition/qualification/v3/Runtime-delegation code is absent from this inventory. It is not a migration source. Existing `WorkflowStore` supports retained recipes across providers and is not deleted merely because of its name.
 
+The inventory above is the original extraction baseline. The later accepted
+[registration profile](COMFY_REGISTRATION.md) adds `comfy.register/get`, immutable
+definitions and schema-7 builds; current HTTP and external catalogs have 25
+operations. It does not restore the retired subsystem.
+
 ## Decisions selected before extraction
 
 | Decision | Required result |
 | --- | --- |
 | Packaging and imports | `flamoris-generation-controller` / `flamoris_generation_controller`, MCP-free base dependencies; optional `http` extra; installed-package checks |
 | Hosting and lifecycle | One runtime in the existing Generation MCP HTTP process. Both adapters share it; output-root lifetime lock rejects duplicate processes before construction/recovery |
-| Minimum contract | POST `/api/v1/generation/{operation}`, 23 explicitly allowlisted retained operations, strict JSON request models, direct object results and bounded image bytes; see [API.md](API.md) |
+| Minimum contract | POST `/api/v1/generation/{operation}`, 23 explicitly allowlisted retained operations, strict JSON request models, direct object results and bounded image bytes; the initial 23-operation baseline is now extended by `comfy.register/get` to 25; see [API.md](API.md) |
 | Trusted caller context | Separate operator service credential authenticates Studio backend and grants the bounded API surface. Studio retains user authorization; MCP ingress supplies only verified non-secret provenance. Context is not a request field |
 | DTO and failure mapping | Existing IDs/output metadata retained; constant HTTP error codes; external ToolError/Image translation remains in facade; no retry/fallback |
 | State compatibility | Existing roots/journals/archive formats remain unchanged. Only `controller-authority/owner.lock` is added; cutover drains/reconciles old versions; see [MIGRATION.md](MIGRATION.md) |
