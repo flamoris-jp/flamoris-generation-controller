@@ -28,6 +28,8 @@ def test_registration_identity_restart_pins_and_reference_contract(settings):
     first = store.definitions.register("Reference image", graph())
     assert first["readiness"]["state"] == "validated"
     assert not first["readiness"]["live_provider_verified"]
+    assert first["parameters"]["reference_image"]["required"] is True
+    assert first["parameters"]["checkpoint"]["default"] == "base.safetensors"
     assert store.definitions.register("Other display label", graph())["duplicate"]
     new = WorkflowStore(ModelCatalog(settings), settings.workflow_dir)
     assert (

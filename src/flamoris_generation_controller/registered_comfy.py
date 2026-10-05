@@ -178,7 +178,7 @@ class ComfyDefinitions:
     def descriptor(self, definition_id):
         from .workflows import builtin_descriptors
 
-        name, _graph, _parameters, reference = self.get(definition_id)
+        name, _graph, defaults, reference = self.get(definition_id)
         base = deepcopy(builtin_descriptors()[0])
         base.update(
             {
@@ -197,7 +197,16 @@ class ComfyDefinitions:
         base["image"].update(
             {"profile": "checkpoint-comfy-v1", "mode": "img2img" if reference else "txt2img"}
         )
+        for key, spec in base["parameters"].items():
+            spec.update({"required": False, "default": getattr(defaults, key)})
         if reference:
+            base["parameters"]["reference_image"] = {
+                "type": "string",
+                "role": "managed_input",
+                "required": True,
+                "pattern": "^[a-f0-9]{32}$",
+                "mime_types": ["image/png", "image/jpeg", "image/webp"],
+            }
             base["image"]["reference_semantics"] = "init_image"
             base["image"]["resize_policy"] = "lanczos-no-crop"
         return base
