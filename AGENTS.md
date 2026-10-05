@@ -4,13 +4,13 @@ This repository documents a future internal generation-domain controller. It has
 
 ## Current authorization
 
-Documentation review/fixes and explicitly requested documentation merges are permitted in Chat. Do not implement Controller, delegate Controller work to Work, migrate/delete source, deploy, restart, change credentials or run providers. Documentation merge is not implementation resumption. Intelligence cleanup elsewhere is the next priority.
+Documentation review/fixes and explicitly requested documentation merges are permitted in Chat. Do not implement Controller, delegate Controller work to Work, migrate/delete source, deploy, restart, change credentials or run providers. Documentation merge is not implementation resumption. The Intelligence cleanup elsewhere is implemented; check current progress before ordering new work.
 
 ## Fixed boundaries
 
 1. Generation MCP is an external adapter. Internal application/service calls use non-MCP contracts, not MCP Hub.
 2. `ComfyWorkFlow` means ComfyUI graph/API-format JSON. `ExecuteFlow` means Runtime inference flow; `ExecutionPlan` remains the Runtime's compiled representation. Do not use bare `Workflow` for a new FLAMORIS design concept. Preserve exact current identifiers and historical quotations when required for truthful documentation.
-3. The existing Generation MCP ComfyWorkFlow subsystem is not a migration source for this repository. Later removal from MCP is separately authorized; do not automatically recreate it here.
+3. The existing Generation MCP ComfyWorkFlow subsystem is not a migration source for this repository. Its custom registry/v3/Runtime-bridge removal is implemented in Generation #69 and matched consumers; do not automatically recreate it here.
 4. Other provider requests are not automatically ComfyWorkFlow. Provider execution stays with the provider. No generic inference or scheduling platform is inferred from generation requests.
 5. Agent is optional personality/conversation/memory. GPU Node Manager retains host lifecycle authority. Studio retains product state and user authorization.
 6. Future internal and external callers must share one generation state owner, not per-frontend stores/reservations.

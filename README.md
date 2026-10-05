@@ -2,9 +2,9 @@
 
 Planned internal generation-domain boundary for FLAMORIS, independent of MCP transport.
 
-**Status: documentation only. Do not implement Controller in the current phase.** No package, endpoint, running service or source migration is provided. The next implementation priority is Intelligence cleanup, coordinated by [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18).
+**Status: documentation only. Do not implement Controller in the current phase.** No package, endpoint, running service or source migration is provided. The internal Intelligence/Agent cleanup and custom generation retirement are implemented in their owners; remaining work is tracked by [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18).
 
-The existing Generation MCP ComfyWorkFlow subsystem is for later removal from that repository, not transfer here. Creating this repository does not require recreating that subsystem. A future Controller implementation needs a separate minimal scope and explicit authorization.
+The custom Generation MCP ComfyWorkFlow registry/v3/Runtime-bridge subsystem has been removed, with retained-data and unknown-work protections. The original builtin/native recipe path remains there until future ownership work. Creating this repository does not require recreating that subsystem. A future Controller implementation needs a separate minimal scope and explicit authorization.
 
 ## Intended responsibility
 
@@ -39,7 +39,7 @@ ComfyUI, Irodori and YuE are contextual provider examples, not support claims fo
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [Boundary inventory and deferred cleanup](docs/MIGRATION.md)
+- [Retirement baseline and future ownership](docs/MIGRATION.md)
 - [Contributor instructions](AGENTS.md)
 - [AI ecosystem](https://github.com/flamoris-jp/flamoris-ai/blob/main/docs/ai-ecosystem.md)
 - [Organization map](https://github.com/flamoris-jp/.github)
@@ -47,7 +47,7 @@ ComfyUI, Irodori and YuE are contextual provider examples, not support claims fo
 
 ## 日本語
 
-Generation Controllerは将来の内部生成制御層です。現在は文書のみで、まだ実装しません。Intelligence整備を先行します。Generation MCPの既存ComfyWorkFlow実装は移植せず、後の削除対象として整理します。同じ仕組みをここで作り直す指示ではありません。
+Generation Controllerは将来の内部生成制御層です。現在は文書のみで、まだ実装しません。内部Intelligence／Agent整備とGeneration MCPの旧custom登録・v3・Runtime橋渡しの削除は各リポジトリで実装済みです。元のbuiltin／native recipeとそのデータ保護は維持します。同じ仕組みをここで作り直す指示ではありません。
 
 ComfyWorkFlowはComfyUI用グラフ・JSON、ExecuteFlowはRuntimeの推論フロー、ExecutionPlanはRuntimeの既存コンパイル済み表現です。内部通信にはMCPを使いません。
 
