@@ -4,8 +4,8 @@ import logging
 from pathlib import Path
 
 from ..comfyui import ComfyUIClient
-from ..models import ModelCatalog
 from ..image_decode import decode_image
+from ..models import ModelCatalog
 from ..workflows import Recipe, RegisteredRecipe, WorkflowStore, build_prompt
 from .base import (
     GenerationRequest,
@@ -79,7 +79,9 @@ class ComfyUIProvider:
         )
 
     async def submit(self, request: GenerationRequest, job_id: str) -> ProviderJob:
-        if request.operation != "image.generate" or not isinstance(request.payload, (Recipe, RegisteredRecipe)):
+        if request.operation != "image.generate" or not isinstance(
+            request.payload, (Recipe, RegisteredRecipe)
+        ):
             raise SubmissionRejected("ComfyUI supports only retained builtin image recipes")
         try:
             if self.workflows is not None:
@@ -96,12 +98,17 @@ class ComfyUIProvider:
         return ProviderJob(execution_id=execution_id)
 
     async def _submit_reference(self, recipe, prompt, job_id):
-        if self.managed_inputs is None or self.input_copies is None or not self.input_copies.available():
+        if (
+            self.managed_inputs is None
+            or self.input_copies is None
+            or not self.input_copies.available()
+        ):
             raise SubmissionRejected("Managed reference image storage is not available")
         posted = False
         try:
             async with self.managed_inputs.stage(
-                job_id, {"reference_image": recipe.reference_image},
+                job_id,
+                {"reference_image": recipe.reference_image},
                 {"reference_image": {"image/png", "image/jpeg", "image/webp"}},
             ) as readers:
                 reader = readers["reference_image"]
@@ -127,7 +134,9 @@ class ComfyUIProvider:
                 except (OSError, ValueError):
                     logger.warning("Rejected reference copy requires reconciliation")
                 if isinstance(exc, Exception):
-                    raise SubmissionRejected("Reference image staging or validation rejected") from None
+                    raise SubmissionRejected(
+                        "Reference image staging or validation rejected"
+                    ) from None
             raise
 
     def _normalize(self, execution_id: str, raw: dict) -> JobSnapshot:

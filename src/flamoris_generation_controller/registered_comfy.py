@@ -5,7 +5,14 @@ import json
 import re
 from copy import deepcopy
 
-from .workflows import Parameters, Recipe, RegisteredRecipe, atomic_write, build_prompt, decode_recipe
+from .workflows import (
+    Parameters,
+    Recipe,
+    RegisteredRecipe,
+    atomic_write,
+    build_prompt,
+    decode_recipe,
+)
 
 MAX_DEFINITION_BYTES = 256 * 1024
 MAX_DEFINITIONS = 64
@@ -21,13 +28,22 @@ def image_prompt(parameters, *, reference=False):
     prompt = build_prompt(Recipe(template="text-to-image", parameters=parameters), Names())
     if reference:
         prompt.pop("4")
-        prompt.update({
-            "8": {"class_type": "LoadImage", "inputs": {"image": "$reference_image"}},
-            "9": {"class_type": "ImageScale", "inputs": {
-                "image": ["8", 0], "upscale_method": "lanczos", "width": parameters.width,
-                "height": parameters.height, "crop": "disabled"}},
-            "10": {"class_type": "VAEEncode", "inputs": {"pixels": ["9", 0], "vae": ["1", 2]}},
-        })
+        prompt.update(
+            {
+                "8": {"class_type": "LoadImage", "inputs": {"image": "$reference_image"}},
+                "9": {
+                    "class_type": "ImageScale",
+                    "inputs": {
+                        "image": ["8", 0],
+                        "upscale_method": "lanczos",
+                        "width": parameters.width,
+                        "height": parameters.height,
+                        "crop": "disabled",
+                    },
+                },
+                "10": {"class_type": "VAEEncode", "inputs": {"pixels": ["9", 0], "vae": ["1", 2]}},
+            }
+        )
         prompt["5"]["inputs"]["latent_image"] = ["10", 0]
     return prompt
 
@@ -45,27 +61,42 @@ def validate_graph(graph):
         raise ValueError("ComfyWorkFlow graph exceeds byte limit")
     classes = {}
     for node_id, node in graph.items():
-        if (type(node_id) is not str or not re.fullmatch(r"[0-9]{1,8}", node_id)
-                or type(node) is not dict or set(node) - {"class_type", "inputs", "_meta"}
-                or type(node.get("inputs")) is not dict or type(node.get("class_type")) is not str):
+        if (
+            type(node_id) is not str
+            or not re.fullmatch(r"[0-9]{1,8}", node_id)
+            or type(node) is not dict
+            or set(node) - {"class_type", "inputs", "_meta"}
+            or type(node.get("inputs")) is not dict
+            or type(node.get("class_type")) is not str
+        ):
             raise ValueError("Invalid ComfyWorkFlow API-format node")
         classes.setdefault(node["class_type"], []).append(node_id)
     reference = "LoadImage" in classes
-    expected = {"CheckpointLoaderSimple": "1", "EmptyLatentImage": "4", "KSampler": "5",
-                "VAEDecode": "6", "SaveImage": "7"}
+    expected = {
+        "CheckpointLoaderSimple": "1",
+        "EmptyLatentImage": "4",
+        "KSampler": "5",
+        "VAEDecode": "6",
+        "SaveImage": "7",
+    }
     if reference:
         expected.pop("EmptyLatentImage")
         expected.update({"LoadImage": "8", "ImageScale": "9", "VAEEncode": "10"})
     if set(classes) != {*expected, "CLIPTextEncode"} or any(
-            len(classes[k]) != (2 if k == "CLIPTextEncode" else 1) for k in classes):
+        len(classes[k]) != (2 if k == "CLIPTextEncode" else 1) for k in classes
+    ):
         raise ValueError("Unsupported ComfyWorkFlow node classes or counts")
     ids = {classes[k][0]: value for k, value in expected.items()}
     sampler = graph[classes["KSampler"][0]]["inputs"]
     try:
         positive, negative = sampler["positive"], sampler["negative"]
-        if (type(positive) is not list or type(negative) is not list
-                or positive[1:] != [0] or negative[1:] != [0]
-                or set((positive[0], negative[0])) != set(classes["CLIPTextEncode"])):
+        if (
+            type(positive) is not list
+            or type(negative) is not list
+            or positive[1:] != [0]
+            or negative[1:] != [0]
+            or set((positive[0], negative[0])) != set(classes["CLIPTextEncode"])
+        ):
             raise ValueError()
         ids.update({positive[0]: "2", negative[0]: "3"})
         normalized = {}
@@ -79,14 +110,17 @@ def validate_graph(graph):
                 inputs[key] = value
             normalized[ids[node_id]] = {"class_type": node["class_type"], "inputs": inputs}
         dimensions = normalized["9" if reference else "4"]["inputs"]
-        parameters = Parameters.model_validate({
-            "checkpoint": normalized["1"]["inputs"]["ckpt_name"],
-            "positive_prompt": normalized["2"]["inputs"]["text"],
-            "negative_prompt": normalized["3"]["inputs"]["text"],
-            "width": dimensions["width"], "height": dimensions["height"],
-            **{k: sampler[k] for k in ("seed", "steps", "cfg", "scheduler", "denoise")},
-            "sampler": sampler["sampler_name"],
-        })
+        parameters = Parameters.model_validate(
+            {
+                "checkpoint": normalized["1"]["inputs"]["ckpt_name"],
+                "positive_prompt": normalized["2"]["inputs"]["text"],
+                "negative_prompt": normalized["3"]["inputs"]["text"],
+                "width": dimensions["width"],
+                "height": dimensions["height"],
+                **{k: sampler[k] for k in ("seed", "steps", "cfg", "scheduler", "denoise")},
+                "sampler": sampler["sampler_name"],
+            }
+        )
         if normalized != image_prompt(parameters, reference=reference):
             raise ValueError()
     except (KeyError, IndexError, TypeError, ValueError):
@@ -102,7 +136,9 @@ class ComfyDefinitions:
         if type(name) is not str or not 1 <= len(name.strip()) <= 120:
             raise ValueError("Invalid ComfyWorkFlow display name")
         normalized, _parameters, _reference = validate_graph(graph)
-        raw = json.dumps(normalized, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+        raw = json.dumps(
+            normalized, sort_keys=True, separators=(",", ":"), allow_nan=False
+        ).encode()
         digest = hashlib.sha256(raw).hexdigest()
         path = self.directory / (digest + ".json")
         if path.is_symlink():
@@ -124,11 +160,17 @@ class ComfyDefinitions:
         if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_DEFINITION_BYTES:
             raise ValueError("Unknown or invalid ComfyWorkFlow definition")
         record = decode_recipe(path.read_bytes())
-        if (type(record) is not dict or set(record) != {"name", "graph"}
-                or type(record["name"]) is not str or not 1 <= len(record["name"].strip()) <= 120):
+        if (
+            type(record) is not dict
+            or set(record) != {"name", "graph"}
+            or type(record["name"]) is not str
+            or not 1 <= len(record["name"].strip()) <= 120
+        ):
             raise ValueError("Invalid ComfyWorkFlow definition")
         graph, parameters, reference = validate_graph(record["graph"])
-        digest = hashlib.sha256(json.dumps(graph, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        digest = hashlib.sha256(
+            json.dumps(graph, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
         if "comfy-" + digest != definition_id:
             raise ValueError("ComfyWorkFlow definition digest mismatch")
         return record["name"], graph, parameters, reference
@@ -138,11 +180,23 @@ class ComfyDefinitions:
 
         name, _graph, _parameters, reference = self.get(definition_id)
         base = deepcopy(builtin_descriptors()[0])
-        base.update({"id": definition_id, "name": name, "kind": "registered-comfy",
-                     "definition_digest": definition_id[6:], "definition_version": 1,
-                     "readiness": {"state": "validated", "basis": "static_checkpoint_profile",
-                                   "live_provider_verified": False}})
-        base["image"].update({"profile": "checkpoint-comfy-v1", "mode": "img2img" if reference else "txt2img"})
+        base.update(
+            {
+                "id": definition_id,
+                "name": name,
+                "kind": "registered-comfy",
+                "definition_digest": definition_id[6:],
+                "definition_version": 1,
+                "readiness": {
+                    "state": "validated",
+                    "basis": "static_checkpoint_profile",
+                    "live_provider_verified": False,
+                },
+            }
+        )
+        base["image"].update(
+            {"profile": "checkpoint-comfy-v1", "mode": "img2img" if reference else "txt2img"}
+        )
         if reference:
             base["image"]["reference_semantics"] = "init_image"
             base["image"]["resize_policy"] = "lanczos-no-crop"
@@ -154,17 +208,26 @@ class ComfyDefinitions:
             raise ValueError("ComfyWorkFlow definition capacity exceeded")
         return [self.descriptor("comfy-" + path.stem) for path in paths]
 
+    def inspect(self, definition_id):
+        _name, graph, defaults, _reference = self.get(definition_id)
+        return {**self.descriptor(definition_id), "graph": graph, "defaults": defaults.model_dump()}
+
     def build(self, definition_id, parameters):
         _name, _graph, defaults, reference = self.get(definition_id)
         values = dict(parameters)
         input_id = values.pop("reference_image", None)
-        if reference != (input_id is not None) or input_id is not None and (
-                type(input_id) is not str or not re.fullmatch(r"[a-f0-9]{32}", input_id)):
+        if (
+            reference != (input_id is not None)
+            or input_id is not None
+            and (type(input_id) is not str or not re.fullmatch(r"[a-f0-9]{32}", input_id))
+        ):
             raise ValueError("ComfyWorkFlow requires exactly its declared reference image input")
         params = Parameters.model_validate({**defaults.model_dump(), **values})
         if params.loras:
             raise ValueError("Registered checkpoint profiles do not accept LoRAs")
-        return RegisteredRecipe(definition_id=definition_id, parameters=params, reference_image=input_id)
+        return RegisteredRecipe(
+            definition_id=definition_id, parameters=params, reference_image=input_id
+        )
 
     def prompt(self, recipe, job_id=None):
         _name, _graph, _defaults, reference = self.get(recipe.definition_id)

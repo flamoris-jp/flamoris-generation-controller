@@ -185,7 +185,8 @@ class GenerationController:
             **self.jobs.activity(),
             "providers": provider_health,
             "managed_input_support": {
-                "ready": self.retained_copy_store_available and self.comfyui.input_copies.available(),
+                "ready": self.retained_copy_store_available
+                and self.comfyui.input_copies.available(),
                 "reference_execution": "checkpoint-comfy-v1",
                 "retained_copy_store_available": self.retained_copy_store_available
                 and self.comfyui.input_copies.available(),
@@ -239,7 +240,7 @@ class GenerationController:
                 "workflows.build": self.workflows.build,
                 "workflows.save": self.workflows.save,
                 "comfy.register": self.workflows.definitions.register,
-                "comfy.get": self.workflows.definitions.descriptor,
+                "comfy.get": self.workflows.definitions.inspect,
                 "jobs.status": self.jobs.status,
                 "jobs.result": self.jobs.result,
                 "jobs.cancel": self.jobs.cancel,
