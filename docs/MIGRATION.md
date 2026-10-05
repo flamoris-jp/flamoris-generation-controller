@@ -10,6 +10,19 @@ Parent: [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18). Local sc
 
 The new ownership work reuses this retained domain. It does not reinstate the retired subsystem. See the [retirement contract](https://github.com/flamoris-jp/flamoris-generation-mcp/blob/main/docs/LEGACY_RETIREMENT.md) and [AI progress](https://github.com/flamoris-jp/flamoris-ai/blob/main/PROGRESS.md) for accepted source and operational status.
 
+## Subsequent registration profile
+
+Controller #7 and matched Generation #72 / Hub #39 add the bounded
+[registration profile](COMFY_REGISTRATION.md) after this extraction baseline.
+The current catalogs expose 25 operations. New immutable definitions live in
+`FLAMORIS_WORKFLOW_DIR/comfy-definitions-v1` and built recipes use schema 7;
+original schema 1/4/5/6 files keep their identities. Reference execution requires
+the configured shared `COMFYUI_INPUT_ROOT` and protects copies with the same
+lease/reservation authority. Drain or reconcile schema-7 jobs and protected copies
+before rollback to an older binary; preserve definitions, recipes and unknown
+journals. The no-database-migration statement below concerns generation transport
+extraction only; Studio assistant model handoff has its own migration.
+
 ## Source separation
 
 | Concern | Destination |
