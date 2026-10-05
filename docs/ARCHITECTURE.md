@@ -11,6 +11,8 @@ Authority: [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18) and [C
 
 The `flamoris_generation_controller` package owns shared construction in `runtime.py`. Generation MCP hosts its two transport adapters around the exact same runtime and closes it once at host shutdown. Disconnecting an MCP session does not close providers or release the reservation. Studio imports neither MCP nor Controller provider internals; it uses ordinary HTTP DTOs and retains consumer validation.
 
+Shutdown rejects new invocations, drains already admitted calls and closes providers before releasing the ownership lock. Concurrent closers join one cleanup task; cancelling a close waiter does not cancel cleanup or admit another owner while an operation still has pending effects. Cancelling an admitted submit retains its unknown journal, then permits shutdown to drain; shutdown does not delete generation reservations.
+
 `authority.py` holds a nonblocking local filesystem lock in the configured output root before provider construction/recovery. Duplicate instances fail before effects, including separate processes. Dispatch checks that the root, namespace and lock identity remain pinned. Lock shutdown leaves the file and all job journals intact. This is local storage ownership, not a distributed scheduler or GPU lifecycle lock; deployments must use one authority/storage root and drain pre-lock versions before activation.
 
 The optional `http_api.py` adapter authenticates a separate operator credential and supplies trusted service context. External MCP ingress authenticates its signed provenance independently. [API.md](API.md) defines strict bounded request models, ordinary results, binary content, safe errors and the service permission boundary.

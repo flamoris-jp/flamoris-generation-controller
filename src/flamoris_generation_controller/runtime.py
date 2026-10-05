@@ -1,5 +1,6 @@
 """One generation runtime and lifecycle shared by every trusted adapter."""
 
+import asyncio
 import inspect
 
 import httpx
@@ -38,6 +39,10 @@ class GenerationController:
         settings = settings or Settings.from_env()
         self.owner = Authority(settings.output_dir)
         self._closed = False
+        self._pending_invocations = 0
+        self._idle = asyncio.Event()
+        self._idle.set()
+        self._close_task: asyncio.Task[None] | None = None
         try:
             catalog = ModelCatalog(settings)
             workflows = WorkflowStore(
@@ -151,9 +156,15 @@ class GenerationController:
             raise
 
     async def close(self):
-        if self._closed:
-            return
-        self._closed = True
+        if self._close_task is None:
+            # Reject new work immediately; every closer joins the same cleanup.
+            self._closed = True
+            self._close_task = asyncio.create_task(self._shutdown())
+        # Cancellation of a host/request waiter cannot release ownership early.
+        await asyncio.shield(self._close_task)
+
+    async def _shutdown(self):
+        await self._idle.wait()
         try:
             await self.providers.close()
         finally:
@@ -194,6 +205,16 @@ class GenerationController:
         if request_type is None:
             raise ControllerError("unknown_operation")
         args = request_type.model_validate(arguments).model_dump()
+        self._pending_invocations += 1
+        self._idle.clear()
+        try:
+            return await self._invoke(operation, args, context)
+        finally:
+            self._pending_invocations -= 1
+            if not self._pending_invocations:
+                self._idle.set()
+
+    async def _invoke(self, operation: str, args: dict, context: CallerContext):
         if operation == "system.health":
             result = await self.health()
         elif operation in {"capabilities.list", "capabilities.get"}:

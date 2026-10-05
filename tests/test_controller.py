@@ -134,6 +134,96 @@ async def test_permission_checked_before_effects(controller):
     assert controller.workflows._recipes == {}
 
 
+@pytest.mark.parametrize("cancel_closer", [False, True])
+async def test_shutdown_keeps_authority_until_admitted_submit_finishes(
+    settings, fake, cancel_closer
+):
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def provider(request):
+        if request.url.path == "/prompt":
+            started.set()
+            await release.wait()
+        return fake.handle(request)
+
+    instance = GenerationController(settings, transport=httpx.MockTransport(provider))
+    context = CallerContext.internal()
+    recipe = await instance.invoke("workflows.build", BUILD, context=context)
+    submission = asyncio.create_task(
+        instance.invoke("jobs.submit", {"workflow_id": recipe["workflow_id"]}, context=context)
+    )
+    closers = []
+    try:
+        await asyncio.wait_for(started.wait(), 2)
+        closers.append(asyncio.create_task(instance.close()))
+        await asyncio.sleep(0)
+        closers.append(asyncio.create_task(instance.close()))
+        await asyncio.sleep(0)
+        if cancel_closer:
+            closers[0].cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await closers[0]
+        assert not closers[-1].done(), "shutdown must wait for the accepted operation"
+        try:
+            probe = Authority(settings.output_dir)
+        except ControllerError as error:
+            assert error.code == "authority_busy"
+        else:
+            probe.close()
+            pytest.fail("another owner was admitted while submit still had effects pending")
+        with pytest.raises(ControllerError, match="authority_unavailable"):
+            await instance.invoke("workflows.build", BUILD, context=context)
+        release.set()
+        assert (await submission)["status"] == "queued"
+        await closers[-1]
+        assert instance.client.http.is_closed
+        probe = Authority(settings.output_dir)
+        probe.close()
+        assert (settings.output_dir / "job-authority" / "active.json").exists()
+    finally:
+        release.set()
+        await asyncio.gather(submission, *closers, return_exceptions=True)
+        await instance.close()
+
+
+async def test_cancelled_admitted_submit_drains_shutdown_and_preserves_unknown(settings, fake):
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def provider(request):
+        if request.url.path == "/prompt":
+            started.set()
+            await release.wait()
+        return fake.handle(request)
+
+    instance = GenerationController(settings, transport=httpx.MockTransport(provider))
+    context = CallerContext.internal()
+    recipe = await instance.invoke("workflows.build", BUILD, context=context)
+    submission = asyncio.create_task(
+        instance.invoke("jobs.submit", {"workflow_id": recipe["workflow_id"]}, context=context)
+    )
+    try:
+        await asyncio.wait_for(started.wait(), 2)
+        submission.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await submission
+        await asyncio.wait_for(instance.close(), 2)
+    finally:
+        release.set()
+        await asyncio.gather(submission, return_exceptions=True)
+        await instance.close()
+    restarted = GenerationController(settings, transport=httpx.MockTransport(fake.handle))
+    try:
+        assert restarted.jobs.activity()["busy"] is True
+        recipe = await restarted.invoke("workflows.build", BUILD, context=context)
+        with pytest.raises(Exception, match="busy"):
+            await restarted.invoke(
+                "jobs.submit", {"workflow_id": recipe["workflow_id"]}, context=context
+            )
+        assert fake.prompts == []
+    finally:
+        await restarted.close()
+
+
 @pytest.mark.parametrize(
     "headers",
     [
@@ -158,6 +248,21 @@ async def test_unconfigured_api_never_dispatches(controller):
             API_PATH + "/workflows.build", json=BUILD, headers={"Authorization": "Bearer " + TOKEN}
         )
     assert response.status_code == 503 and controller.workflows._recipes == {}
+
+
+async def test_long_listed_model_id_remains_inspectable(http, settings):
+    # The retained domain permits model names up to 1024 UTF-8 bytes.
+    path = settings.model_root / "diffusion_models"
+    for part in ("a" * 200, "b" * 200, "c" * 200):
+        path /= part
+    path.mkdir(parents=True)
+    (path / "model.safetensors").write_bytes(b"fixture only")
+    listed = await http.post("models.list", json={"kind": "diffusion_model"})
+    assert listed.status_code == 200
+    model = listed.json()["models"][0]
+    assert len(model["id"]) > 512 and len(model["name"].encode()) <= 1024
+    inspected = await http.post("models.get", json={"model_id": model["id"]})
+    assert inspected.status_code == 200 and inspected.json() == model
 
 
 @pytest.mark.parametrize(

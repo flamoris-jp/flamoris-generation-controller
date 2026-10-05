@@ -25,7 +25,8 @@ class ModelsList(Request):
 
 
 class ModelGet(Request):
-    model_id: OpaqueID
+    # Retain the domain's 1024-byte filename plus the longest kind prefix.
+    model_id: Annotated[str, Field(min_length=1, max_length=1040)]
 
 
 class CapabilityGet(Request):

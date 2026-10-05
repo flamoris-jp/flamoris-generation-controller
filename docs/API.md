@@ -33,9 +33,11 @@ POST `/api/v1/generation/{operation}` with `Content-Type: application/json` and 
 
 Exact strict request models are in [`contracts.py`](../src/flamoris_generation_controller/contracts.py). Retained recipe, output and archive structures are unchanged; consumers still validate results. Optional old definition/readiness arguments to build reject explicitly; they do not enable retired features.
 
+Model identifiers keep `kind:relative_filename`: the retained filename limit is 1024 UTF-8 bytes, and `models.get` allows the kind prefix in addition (at most 1040 characters). A model returned by `models.list` remains inspectable even when its nested relative path exceeds the generic opaque-ID bound.
+
 JSON objects are returned directly with HTTP 200. `assets.get` returns `image/png`, `image/jpeg` or `image/webp` bytes with no base64/MCP wrapping. Other media uses prepare/read. Responses carry `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`.
 
-Limits: 512 KiB request body, 15-second body-read deadline, 2 MiB JSON response, existing 64 MiB image retrieval/provider-download limit, 256 KiB raw transfer/upload chunk, 8 MiB uploaded image. Stored input decode/staging/disk/expiry limits remain enforced by the retained domain. Compressed request/response bodies are unsupported. Studio additionally bounds each read and consumer preview size, forbids redirects/environment proxies and uses 45-second normal / 300-second image / 330-second prepare timeouts. Upload runs in one connection under a 75-second deadline with 15-second chunk calls.
+Limits: 512 KiB request body, 15-second body-read deadline, 2 MiB JSON response, existing 64 MiB image retrieval/provider-download limit, 256 KiB raw transfer/upload chunk, 8 MiB uploaded image. Stored input decode/staging/disk/expiry limits remain enforced by the retained domain. Compressed request/response bodies are unsupported. Studio requests identity encoding, additionally bounds each read and consumer preview size, forbids redirects/environment proxies and applies whole-call deadlines (including connection setup, headers and streaming) of 45 seconds normally / 300 seconds for images / 330 seconds for prepare. Upload runs in one connection under a 75-second deadline with 15-second chunk calls.
 
 ## Safe failures and uncertainty
 
