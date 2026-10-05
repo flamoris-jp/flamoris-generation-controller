@@ -25,3 +25,14 @@ temp/
 .cache/
 
 # Language- and runtime-specific ignores belong in each generated repository.
+
+# Python and local generation state
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+.generation/

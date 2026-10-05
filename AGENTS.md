@@ -1,12 +1,12 @@
 # Contributor and AI-agent instructions
 
-This repository is the planned owner of FLAMORIS generation-domain code. It currently contains documentation only. Read README.md, docs/ARCHITECTURE.md, docs/IMPLEMENTATION.md, docs/MIGRATION.md, current [AI progress](https://github.com/flamoris-jp/flamoris-ai/blob/main/PROGRESS.md), [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18) and [Controller #1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
+This repository is the owner of FLAMORIS generation-domain code. It contains the MCP-free core and optional internal HTTP adapter. Read README.md, docs/ARCHITECTURE.md, docs/IMPLEMENTATION.md, docs/MIGRATION.md, current [AI progress](https://github.com/flamoris-jp/flamoris-ai/blob/main/PROGRESS.md), [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18) and [Controller #1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
 
 ## Current task and sequencing
 
-The latest 2026-10-05 user decision requests Controller README/AGENTS setup and implementation-policy preparation in Controller and FLAMORIS AI. This supersedes the earlier blanket hold on Controller preparation. The current task is documentation, source inventory, issue alignment and reviewable PRs; it does not implement Controller or change caller source.
+The latest 2026-10-05 user instruction explicitly requests Controller implementation. It authorizes retained-domain extraction, matched Generation MCP/Studio integration, tests, review/fixes and reviewable PRs. This supersedes the documentation-only preparation hold. Live cutover, data/grants/credentials, paid calls and new generation features remain separate scopes. Merges require applicable explicit user authorization.
 
-Subsequent code work follows the user's scoped implementation instruction and the plan below. These instructions are not a permanent ban on Controller development. Do not infer code or live-operation authorization from merging documentation. User instructions govern scope; existing session authorization does not need to be requested again.
+The selected initial host is one Controller object inside the Generation MCP HTTP process, shared by external MCP and authenticated internal HTTP adapters. The output-root lifetime ownership lock must be acquired before provider construction or recovery. Keep the exact API/service-permission decisions in docs/API.md and Controller #1; never create another runtime per caller/session.
 
 ## Dependency and ownership rules
 
@@ -19,7 +19,7 @@ Subsequent code work follows the user's scoped implementation instruction and th
 
 ## Contract and state continuity
 
-Before code extraction, settle the minimum request/result/error/context contract, packaging/hosting and one reservation owner in Controller #1. Library reuse in independent processes must not produce independent JobStores, locks or journals; sharing a storage directory does not provide cross-process exclusion. Consider co-hosting the facade and internal adapter before adding a network process.
+The minimum request/result/error/context, package, co-hosting and ownership contract was recorded in Controller #1 before extraction. Follow docs/API.md and docs/ARCHITECTURE.md when changing it. Library reuse in independent processes must not produce independent JobStores, locks or journals; sharing a storage directory does not provide cross-process exclusion. Consider co-hosting the facade and internal adapter before adding a network process.
 
 Preserve existing IDs, data/storage identities, declared output roles, bounded inputs/staging/transfer, input-use leases, retention and non-secret provenance. Separate transport settings from provider/storage settings. Existing `WorkflowStore`, `workflows.*`, `workflow_id`, schemas and configuration literals keep their exact names until a tested compatibility decision.
 
@@ -29,11 +29,11 @@ Authenticate trusted caller context at each ingress and enforce the selected aut
 
 ## Implementation and checks
 
-For a later code task, inspect current Generation/Studio source, tests and owner instructions at fixed revisions; the recorded inventory is a starting point, not proof the source has not changed. Keep focused stages: core/lifecycle and state ownership, external MCP compatibility, then Studio gateway replacement. Update affected owner documentation with each code change.
+For further code work, inspect current Generation/Studio source, tests and owner instructions at fixed revisions; the recorded inventory is a starting point, not proof the source has not changed. Keep focused stages: core/lifecycle and state ownership, external MCP compatibility, then Studio gateway replacement. Update affected owner documentation with each code change.
 
 Use fake providers and bounded fixtures in normal CI. Verify MCP-free core imports/installed packaging, one admission authority across both callers, unknown/restart/no-replay behavior, scoped cancellation, immutable inputs, output metadata, provenance, retained records and Studio account isolation. Contract extraction does not prove live model/GPU readiness.
 
-The current documentation task checks local links, exact source identifiers, dependency direction, as-built/target status and diff whitespace. Do not claim runtime tests from this change. Keep Controller #1 open while contract decisions and implementation remain pending; preserve prior PR/Issue evidence.
+Run core/domain/API tests, lint/format and installed-wheel checks without MCP. Matched facade/Studio CI covers protocol compatibility, shared admission and two-account isolation. Keep Controller #1 open until source acceptance; record operational acceptance separately and preserve previous evidence.
 
 ## Operations and repository practice
 
