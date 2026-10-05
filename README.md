@@ -1,24 +1,42 @@
 # FLAMORIS Generation Controller
 
-Planned internal generation-domain boundary for FLAMORIS, independent of MCP transport.
+Shared generation control for FLAMORIS, independent of MCP transport.
 
-**Status: documentation only. Do not implement Controller in the current phase.** No package, endpoint, running service or source migration is provided. The internal Intelligence/Agent cleanup and custom generation retirement are implemented in their owners; remaining work is tracked by [FLAMORIS AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18).
+**Status: implementation preparation, 2026-10-05.** The user has selected Controller as the next generation architecture work and requested README/AGENTS setup and implementation-policy updates first. This repository still contains documentation only: no Controller package, API or running service exists. The earlier blanket preparation hold is superseded by this decision; code implementation and deployment are subsequent tasks. See [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18) and [Controller #1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
 
-The custom Generation MCP ComfyWorkFlow registry/v3/Runtime-bridge subsystem has been removed, with retained-data and unknown-work protections. The original builtin/native recipe path remains there until future ownership work. Creating this repository does not require recreating that subsystem. A future Controller implementation needs a separate minimal scope and explicit authorization.
+## Purpose and target paths
 
-## Intended responsibility
+Studio and Generation MCP are two callers of the same Controller. Controller owns shared generation processing; it does not relay Studio requests through MCP.
 
-A future Controller can own configured generation providers/adapters and capability metadata, generation requests/jobs/results, managed inputs/references, staging and generated assets. Concrete API, packaging and deployment decisions remain open in [#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
+| Caller | Target path, not yet implemented |
+| --- | --- |
+| Studio | Studio → non-MCP Controller contract → configured providers |
+| ChatGPT / external MCP client | MCP Hub → Generation MCP facade → the same Controller → configured providers |
 
-```text
-Target external path:
-ChatGPT -> MCP Hub -> Generation MCP -> future Controller -> providers
+Both paths use one generation job/input/asset authority and one active-generation reservation. Sharing a Python package alone is insufficient if each frontend creates a separate JobStore. A separate Controller network process is not required by this policy; hosting and internal transport will be selected from the actual callers.
 
-Target internal path:
-Studio ------------------------------> future Controller -> providers
-```
+## Responsibilities
 
-MCP exposes external tools; internal callers use a non-MCP contract. Both frontends must eventually use one generation state owner, not independent JobStores/reservations. This diagram does not claim current deployment or mandate a new network hop.
+| Owner | Responsibility |
+| --- | --- |
+| Controller | Provider adapters, model/capability metadata, validated generation recipes, requests/jobs/results, managed inputs, staging, generated assets and retention |
+| Generation MCP | External tools, MCP validation/annotations, signed MCP ingress and request/result/content translation |
+| Studio | Accounts/sessions, user authorization, UI/drafts/presets/history, opaque job/asset/input mappings and browser delivery |
+| Providers | Actual media execution and provider-local state |
+| GPU Node Manager | Host-wide runtime/GPU lifecycle |
+| AI Runtime / Agent | Inference and ExecuteFlow / optional personality and conversations, respectively |
+
+Implementation starts from the retained, reviewed Generation domain, not a new generation framework. It preserves the two builtin image recipes and configured native Speech, Music and transcription recipes. The removed custom ComfyWorkFlow registry/versioning/v3/qualification/Runtime-bridge subsystem is not an extraction source.
+
+## Implementation sequence
+
+1. Record the retained-source inventory, smallest non-MCP contract, hosting, trusted caller context and one state owner.
+2. Reuse the retained recipe/provider/job/input/asset code in a transport-independent Controller package, with shared construction and lifecycle.
+3. Connect the external Generation MCP facade to that authority while preserving its reviewed compatibility contracts.
+4. Replace Studio's Generation MCP gateway with the same non-MCP contract; retain Studio ownership and uncertain-request fences.
+5. Verify both callers, packaging, retained state and failure behavior with fake providers; prepare live cutover/rollback separately.
+
+The [implementation plan](docs/IMPLEMENTATION.md) defines the inventory, open decisions and acceptance criteria. Splitting responsibilities does not itself add reference-image generation, arbitrary graph registration, new providers or automatic GPU switching.
 
 ## Terminology
 
@@ -28,28 +46,23 @@ MCP exposes external tools; internal callers use a non-MCP contract. Both fronte
 | `ExecuteFlow` | AI Runtime's inference dependency/data/control flow |
 | `ExecutionPlan` | AI Runtime's existing compiled representation |
 
-ComfyWorkFlow is specific to ComfyUI. Other generation providers may use request/recipe contracts without a graph. Neither naming nor MCP separation transfers the ComfyUI builder to AI Runtime. Constructing JSON, submitting it and qualifying real generation are separate operations.
-
-## Non-goals now
-
-No Controller implementation, automatic extraction, replacement builder, new provider, generic scheduler, inference kernel, Agent-memory layer or GPU/systemd control. Agent is optional personality; GPU Node Manager retains host-wide lifecycle authority; Studio retains user authorization and product state.
-
-ComfyUI, Irodori and YuE are contextual provider examples, not support claims for this empty implementation repository. There are no install/build/run commands, service ports or API routes to configure.
+Non-ComfyUI requests remain generation recipes. Preserve current identifiers such as `WorkflowStore`, `workflows.*` and `workflow_id` until a reviewed compatibility change. JSON construction, submission and real provider acceptance are separate stages.
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [Retirement baseline and future ownership](docs/MIGRATION.md)
-- [Contributor instructions](AGENTS.md)
+- [Implementation plan and retained-source inventory](docs/IMPLEMENTATION.md)
+- [Retirement baseline, state continuity and cutover](docs/MIGRATION.md)
+- [Contributor and AI-agent instructions](AGENTS.md)
+- [AI progress](https://github.com/flamoris-jp/flamoris-ai/blob/main/PROGRESS.md)
 - [AI ecosystem](https://github.com/flamoris-jp/flamoris-ai/blob/main/docs/ai-ecosystem.md)
-- [Organization map](https://github.com/flamoris-jp/.github)
 - [Repository policy](https://github.com/flamoris-jp/flamoris-commons/blob/main/docs/repository-policy.md)
 
 ## 日本語
 
-Generation Controllerは将来の内部生成制御層です。現在は文書のみで、まだ実装しません。内部Intelligence／Agent整備とGeneration MCPの旧custom登録・v3・Runtime橋渡しの削除は各リポジトリで実装済みです。元のbuiltin／native recipeとそのデータ保護は維持します。同じ仕組みをここで作り直す指示ではありません。
+Generation Controllerは、StudioとGeneration MCPの両方から呼ばれる共通の生成制御層です。StudioとMCPを直列につなぐ中継ではなく、生成Job/Input/Assetと実行予約を一つに保ちます。
 
-ComfyWorkFlowはComfyUI用グラフ・JSON、ExecuteFlowはRuntimeの推論フロー、ExecutionPlanはRuntimeの既存コンパイル済み表現です。内部通信にはMCPを使いません。
+2026-10-05の指示で、README・AGENTSと実装方針の整備へ進みました。ソースはまだ未実装です。現在残っている基本/native生成を再利用し、MCPには外部入口、Studioにはユーザー権限と画面・履歴を残します。具体的なコード実装、実機切替、新しい参照画像機能は後続の作業です。
 
 ## FLAMORIS and license
 

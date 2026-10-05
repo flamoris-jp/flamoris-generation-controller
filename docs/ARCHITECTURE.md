@@ -1,45 +1,42 @@
-# Future Generation Controller boundary
+# Generation Controller architecture
 
-Authority: [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18); local design [#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1). Controller implementation is deferred. This document defines a target, not a running service or a code-extraction task.
+Authority: [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18) and local [Controller #1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1). On 2026-10-05 the user selected implementation preparation, beginning with documentation. Controller remains unimplemented; this is the target boundary. [IMPLEMENTATION.md](IMPLEMENTATION.md) records the source inventory, decisions still needed and staged acceptance.
 
-```text
-ChatGPT -> MCP Hub -> Generation MCP --+
-                                      |
-Studio -------------------------------+-> future Controller -> providers
-```
+## Current and target paths
 
-Behind the MCP facade, callers use an internal non-MCP contract. Exact library/service packaging, authentication, deployment and DTOs require later design; no extra network service is mandated.
+| Caller | Current source | Target |
+| --- | --- | --- |
+| Studio generation | Generation MCP compatibility gateway → co-located domain/providers | Non-MCP contract → one Controller authority → providers |
+| External generation | MCP Hub → Generation MCP → co-located domain/providers | MCP Hub → Generation MCP facade → the same Controller → providers |
 
-## Intended ownership
+Controller is the shared domain owner, not a Studio-to-MCP relay. No extra network hop is mandated: a domain package, its host and its transport adapters are separate decisions. Whatever hosting is chosen, there is one JobStore/reservation authority, not one per caller. Internal contracts carry ordinary typed values and safe domain errors, never MCP SDK objects.
+
+## Ownership
 
 | Component | Target responsibility |
 | --- | --- |
-| Controller | Internal generation requests/provider adapters, jobs/results, inputs/references, assets and domain checks |
-| Generation MCP | External tools, MCP validation/annotations and request/result translation |
-| ComfyUI / other providers | Actual provider execution and provider-local state |
-| AI Runtime | Inference, ExecuteFlow and compiled ExecutionPlan, active jobs/state/resources |
+| Controller | Provider/model/capability contracts, retained generation recipes, request validation, jobs/status/cancel/results, managed inputs/staging, assets/transfer and retention |
+| Generation MCP | External tool/schema/annotations, wire validation, signed-envelope ingress and MCP content/error translation |
+| Studio | User/session authorization, CSRF, user-facing orchestration, drafts/presets/history, owned opaque references and bounded browser responses |
+| Providers | Actual execution, provider-specific command/API adaptation and provider-local state |
+| AI Runtime | Inference, ExecuteFlow, compiled ExecutionPlan, its active jobs/state/resources |
 | AI Agent | Optional personality, conversations and context policy |
 | GPU Node Manager | Host-wide runtime/GPU lifecycle |
-| Studio | Authenticated UI, drafts and user-scoped access |
 
-## ComfyWorkFlow is not ExecuteFlow
+Studio can retain request records and displayed job state as references/projections. Controller owns authoritative generation state. User-input DTO checks and untrusted-result checks remain at the Studio boundary even when generation constraints share a common contract.
 
-A ComfyWorkFlow is ComfyUI API-format graph/JSON. Future JSON construction would use its separately reviewed parameter/input contract; the provider then executes the graph. It is not a Runtime inference flow and needs no compulsory Agent, AI Runtime or MCP Hub. Other providers may use ordinary generation recipes instead.
+## Reuse the retained domain
 
-ExecuteFlow belongs to AI Runtime. Its source/control description is distinct from the existing compiled ExecutionPlan and scheduler-visible Jobs. A future Runtime call to generation could be an explicit internal capability, but that is not required or implemented here.
+The existing builtin image and native Speech/Music/transcription recipe paths are the source of the initial Controller scope. Move ordinary domain processing and its construction/lifecycle out of MCP-specific startup; preserve current behavior and identities. Shared schema/profile definitions may be reused by consumers without importing Controller runtime or provider internals into Studio.
 
-## No migration of the old ComfyWorkFlow subsystem
+Generation #69/#70 removed custom registry/versioning, composition/v3, qualification and Runtime delegation. Those deleted subsystems are not copied or rebuilt. Existing `WorkflowStore` and `workflow_id` describe retained generation recipes, including non-ComfyUI providers.
 
-The earlier plan to copy the existing Generation MCP builder/registry into Controller is superseded. Generation #69 retired the custom registry/versioning/composition/qualification and Runtime-delegation subsystem; Studio #63, Hub #37 and Runtime #25 removed its consumers. Original builtin/native recipes, jobs and protected data remain. See [retirement baseline](MIGRATION.md). Do not interpret this document as an instruction to implement a replacement builder or retain every obsolete subsystem forever.
+A ComfyWorkFlow is ComfyUI API-format graph/JSON; ComfyUI executes it. ExecuteFlow and compiled ExecutionPlan remain Runtime concepts. Constructing a bounded image graph requires neither an Agent nor a Runtime bridge. Reference-image generation and new custom-graph features require separate product scope.
 
-The implemented removal separates source and dependent tests from saved definitions, asset/input records, credentials, historical evidence and unresolved provider work. Persistent-data deletion and live cutover are separate decisions. Controller remains unimplemented meanwhile.
+## One state owner and trusted ingress
 
-## Future contract constraints
+Both caller paths must use the same active-job reservation, durable unknown state, input-use leases, asset identity and retention records. A shared package or storage path alone cannot establish exclusion across independent processes. Select the hosting/locking contract before extraction and preserve reservation-before-submit semantics.
 
-When separately commissioned, use the smallest contract required by real consumers. Preserve one shared generation state authority, explicit provider selection and honest unavailable/unknown results. A reference or transport reconnect does not authorize a new attempt.
+Keep MCP signed-envelope verification and replay admission at external ingress. Controller accepts only the verified, transport-independent caller context defined by the implementation contract, and records non-secret provenance. Studio's user ownership and opaque mappings remain enforced before dispatch and before publication; an identifier or provenance value is not an access grant. Internal service authentication and operation permissions must be designed explicitly, not inferred from a local connection.
 
-Retained paths keep user authorization, bounded input/output/staging, immutable references, declared output handling, safe errors/provenance and no hidden retry/fallback. Static JSON validity, current provider availability and real generation qualification are different claims. No manual ready flag or weakened protection is introduced by this architecture.
-
-## Current phase
-
-Controller remains documentation-only. Intelligence/Agent internal connections and custom generation source retirement are already implemented elsewhere. No source extraction/deletion, new framework, API, deployment, provider call, runtime switch or Controller implementation occurs here.
+Retained paths preserve immutable references, declared output roles, bounded decoding/staging/transfer, safe errors/paths and no hidden retry/fallback. JSON validity, provider availability, host readiness and real generation acceptance remain different claims. Source acceptance and live cutover are recorded separately.
