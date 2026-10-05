@@ -165,6 +165,13 @@ async def test_ambiguous_reference_post_preserves_copy_and_reservation(settings,
         assert list((root / "flamoris-inputs").glob("*.png"))
     finally:
         await controller.close()
+    restarted = GenerationController(settings, transport=httpx.MockTransport(fake.handle))
+    try:
+        assert restarted.jobs.activity()["busy"]
+        assert list((root / "flamoris-inputs").glob("*.png"))
+        assert not fake.prompts
+    finally:
+        await restarted.close()
 
 
 async def test_missing_input_storage_rejects_before_post(settings, fake):
@@ -177,13 +184,6 @@ async def test_missing_input_storage_rejects_before_post(settings, fake):
         assert not fake.prompts
     finally:
         await controller.close()
-    restarted = GenerationController(settings, transport=httpx.MockTransport(fake.handle))
-    try:
-        assert restarted.jobs.activity()["busy"]
-        assert list((root / "flamoris-inputs").glob("*.png"))
-        assert not fake.prompts
-    finally:
-        await restarted.close()
 
 
 async def test_registration_http_transport(http):
