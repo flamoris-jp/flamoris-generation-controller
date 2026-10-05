@@ -1,37 +1,53 @@
-# Boundary inventory and deferred cleanup
+# Retirement baseline and future ownership
 
-Parent: [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18). Local scope: [#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1); MCP-side scope: [Generation #67](https://github.com/flamoris-jp/flamoris-generation-mcp/issues/67).
+Parent: [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18). Local scope:
+[#1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
+This filename is retained for existing links. Controller is documentation-only;
+there is no package, running endpoint or source migration to configure.
 
-This filename is retained for existing links. **This is not an extraction order. Controller is not implemented now; Intelligence cleanup comes first.**
+## Implemented source baseline
 
-## Disposition to review later
+- Intelligence #12 supplies the shared non-MCP provider library. Agent #40 uses it
+  directly and exposes the internal HTTP API. Studio #63 uses the library for raw
+  inference and Agent HTTP for personality/conversations.
+- Generation #69 removes custom definition registration/versioning/bindings,
+  qualification, v3 composition and the Runtime-delegation bridge. Hub #37 removes
+  their tools; Studio #63 removes their dispatch; Runtime #25 removes its matching
+  media lowering. These features are retired, not transferred here.
+- The original two schema-1 ComfyUI templates and opt-in schema-4 Speech, schema-5
+  Music and schema-6 transcription recipes remain. Generation currently co-locates
+  their domain logic and external facade. Studio generation still uses that MCP
+  compatibility path; it has not already cut over to Controller.
 
-| Existing concern | Direction, not present authorization |
+See the owning [Generation retirement contract](https://github.com/flamoris-jp/flamoris-generation-mcp/blob/main/docs/LEGACY_RETIREMENT.md)
+and [AI progress](https://github.com/flamoris-jp/flamoris-ai/blob/main/PROGRESS.md)
+for reviewed revisions, evidence and operational holds.
+
+## Future contract decisions
+
+| Retained concern | Ownership decision still required |
 | --- | --- |
-| MCP tools/annotations/transport/content mapping | Keep external MCP responsibility in Generation MCP |
-| ComfyWorkFlow builder/registry/bindings and associated subsystem | Later removal from Generation MCP, not transfer into Controller or Runtime; inventory exact boundaries first |
-| Provider metadata/adapters and capability registry | Candidate future Controller responsibility; no blanket copy or rewrite authorized |
-| JobStore/reservation/status/cancel/results | Decide future ownership without duplicating state or losing unresolved work; no move now |
-| Managed inputs/staging/assets/transfer | Preserve data, access checks and safety; future ownership review, not data deletion |
-| Qualification/invalidation records and checks | Separate safeguards needed by retained paths from checks owned only by a retired feature; no bypass or evidence deletion by default |
-| Host lifecycle and measured runtime facts | Remain with GPU Node Manager/provider/deployment owners |
-| ExecuteFlow, compiled ExecutionPlan and native inference | Remain with AI Runtime |
-| v3 composition/bridge/provider expansion | Deferred; not a prerequisite for Intelligence cleanup or simple ComfyWorkFlow JSON construction |
+| External MCP tools/annotations/content translation | Remain the external Generation facade |
+| Provider/capability metadata and adapters | Candidate Controller contract; use actual retained consumers, no wholesale copy |
+| Recipe construction, jobs/status/cancel/results | One shared domain authority; decide library/service packaging and DTOs |
+| Managed inputs, historical copy ledgers, assets and transfer | Preserve ownership, storage identity, bounds and retention; no data deletion |
+| Host lifecycle and runtime facts | Remain with GPU Node Manager/provider/deployment owners |
+| ExecuteFlow and compiled ExecutionPlan | Remain with AI Runtime |
 
-This is a domain-level inventory, not a completed file-by-file audit. The later removal task must pin the source revision and exact source/test/tool/caller scope. In particular, a generic recipe store may support non-ComfyUI providers; names alone are insufficient grounds to delete it.
+A later Controller task needs its own minimal scope and explicit authorization.
+It must not recreate custom registration, qualification, composition or an internal
+MCP service bus. Names such as `WorkflowStore` describe retained recipe support,
+including non-ComfyUI providers, and are not grounds for indiscriminate deletion.
 
-## Before any later Generation deletion
+## Data, uncertainty and acceptance
 
-Record affected external tools and Studio consumers, the behavior that remains, unsupported-call errors, data readers, saved definitions/assets/inputs/evidence, active or uncertain reservations, and rollback needs. Do not treat code retirement as permission to drop persistent data or break retained provider paths silently.
+Saved definitions/recipes, user assets/inputs, grants, historical evidence and
+active journals remain intact. New Generation source refuses old custom execution
+and preserves opaque active debt without polling, replaying, cancelling or releasing
+its busy reservation. Reconcile that work with the previous matched authority before
+an operational upgrade; a missing provider record is insufficient proof of release.
 
-Existing source/test evidence can inform design without migrating the implementation. A future Controller task must be minimal and separately authorized; it is not ordered to recreate the same subsystem.
-
-## Evidence and history
-
-Builder-only tests establish JSON construction, not provider execution or production qualification. Later retained provider/domain tests must cover authorization, bounds, state and uncertain outcomes; external MCP tests cover mapping rather than a second state machine. Real generation, cutover and rollback require separate operational approval.
-
-Historical references include Generation MCP #19/#42 (ComfyUI definitions and reference semantics), #30 (managed inputs), #25/#31 (providers), and #45-related v3 work. Their literal code/file names and acceptance records remain history. No completed Issue or merged PR is reopened or reverted by this document.
-
-## Current completion boundary
-
-Only documentation review, fixes and requested documentation merges are in scope. Exact inventories, internal API/packaging decisions, Controller implementation, source deletion, reference-image expansion and live migration remain future work. Keep the design/correction Issues open for their actual remaining scope.
+Source tests establish retained contracts, not live GPU/model/host readiness.
+Controller implementation, real generation, cutover, rollback and persistent-data
+changes are separate tasks. Historical Generation #19/#42, #30, #25/#31 and v3
+records stay in Git/Issue history and do not act as current implementation orders.

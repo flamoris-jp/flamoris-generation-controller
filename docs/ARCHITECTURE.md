@@ -24,15 +24,15 @@ Behind the MCP facade, callers use an internal non-MCP contract. Exact library/s
 
 ## ComfyWorkFlow is not ExecuteFlow
 
-A ComfyWorkFlow is ComfyUI API-format graph/JSON. JSON construction may apply declared values and managed reference bindings; the provider then executes the graph. It is not a Runtime inference flow and needs no compulsory Agent, AI Runtime or MCP Hub. Other providers may use ordinary generation recipes instead.
+A ComfyWorkFlow is ComfyUI API-format graph/JSON. Future JSON construction would use its separately reviewed parameter/input contract; the provider then executes the graph. It is not a Runtime inference flow and needs no compulsory Agent, AI Runtime or MCP Hub. Other providers may use ordinary generation recipes instead.
 
 ExecuteFlow belongs to AI Runtime. Its source/control description is distinct from the existing compiled ExecutionPlan and scheduler-visible Jobs. A future Runtime call to generation could be an explicit internal capability, but that is not required or implemented here.
 
 ## No migration of the old ComfyWorkFlow subsystem
 
-The earlier plan to copy the existing Generation MCP builder/registry into Controller is superseded. Later Generation cleanup should retire that MCP-side implementation after an exact source/tool/caller inventory. Do not interpret this document as an instruction to implement a replacement builder or retain every obsolete subsystem forever.
+The earlier plan to copy the existing Generation MCP builder/registry into Controller is superseded. Generation #69 retired the custom registry/versioning/composition/qualification and Runtime-delegation subsystem; Studio #63, Hub #37 and Runtime #25 removed its consumers. Original builtin/native recipes, jobs and protected data remain. See [retirement baseline](MIGRATION.md). Do not interpret this document as an instruction to implement a replacement builder or retain every obsolete subsystem forever.
 
-The removal scope must separate source and dependent tests from saved definitions, asset/input records, credentials, qualification evidence and unresolved provider work. Persistent-data deletion and live cutover are separate decisions. Controller remains unimplemented meanwhile.
+The implemented removal separates source and dependent tests from saved definitions, asset/input records, credentials, historical evidence and unresolved provider work. Persistent-data deletion and live cutover are separate decisions. Controller remains unimplemented meanwhile.
 
 ## Future contract constraints
 
@@ -42,4 +42,4 @@ Retained paths keep user authorization, bounded input/output/staging, immutable 
 
 ## Current phase
 
-Review/fix/merge documentation only. Intelligence cleanup comes first elsewhere. No source extraction/deletion, new framework, API, deployment, provider call, runtime switch or Controller implementation occurs here.
+Controller remains documentation-only. Intelligence/Agent internal connections and custom generation source retirement are already implemented elsewhere. No source extraction/deletion, new framework, API, deployment, provider call, runtime switch or Controller implementation occurs here.
