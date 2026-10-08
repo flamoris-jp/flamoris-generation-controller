@@ -9,6 +9,8 @@ import time
 from pathlib import Path
 from typing import Protocol
 
+from flamoris_update_core.admission import guarded
+
 from .asset_files import AssetFiles
 from .config import Settings
 
@@ -50,6 +52,7 @@ class RetentionStore:
                 raise ValueError("Provider retention receipt exceeds limit")
             files.write(RECEIPT, payload)
 
+    @guarded()
     def cleanup(
         self,
         *,
