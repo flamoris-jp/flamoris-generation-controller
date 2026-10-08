@@ -4,6 +4,7 @@ import asyncio
 import inspect
 
 import httpx
+from flamoris_update_core.admission import guarded, register_boot
 
 from . import __version__
 from .authority import Authority
@@ -152,6 +153,7 @@ class GenerationController:
             self.transfers = transfers
             self.inputs = inputs
             self.uploads = uploads
+            register_boot("flamoris-generation-controller")
         except BaseException:
             self.owner.close()
             raise
@@ -197,6 +199,7 @@ class GenerationController:
             },
         }
 
+    @guarded(ControllerError)
     async def invoke(self, operation: str, arguments: dict, *, context: CallerContext):
         if not isinstance(context, CallerContext) or operation not in context.permissions:
             raise ControllerError("forbidden")

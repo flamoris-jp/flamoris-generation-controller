@@ -4,18 +4,19 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flamoris-generation-controller"
-version = "0.1.0"
+version = "1.0.0"
 description = "Shared bounded generation domain and internal HTTP adapter"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
-dependencies = ["httpx>=0.28,<1", "pydantic>=2.11,<3", "Pillow>=11,<13"]
+dependencies = ["flamoris-update-core[owner] @ https://github.com/flamoris-jp/flamoris-updater/archive/d9f010a92ff6e8a1e7a3b7fad8817850bdfb72cd.zip#subdirectory=packages/update-core", "httpx>=0.28,<1", "pydantic>=2.11,<3", "Pillow>=11,<13"]
 
 [project.optional-dependencies]
 http = ["starlette>=0.40,<2"]
 dev = ["pytest>=8,<10", "pytest-asyncio>=1,<2", "ruff>=0.14,<1", "build>=1.2,<2"]
 
 [project.scripts]
+flamoris-generation-controller-update-owner = "flamoris_generation_controller.updater:main"
 flamoris-generation-retention = "flamoris_generation_controller.retention:main"
 
 [tool.hatch.build.targets.wheel]
@@ -31,3 +32,6 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
