@@ -28,3 +28,15 @@ initialization, private profile/trust provisioning, release publication, live
 provider call, real-host update, enrollment or automatic merge occurred. Native
 deployment overlays and matched dependencies remain deployment-owned.
 See [Updater contract](docs/UPDATER.md).
+
+## Pre-deployment retained-resource correction
+
+The private inventory review found separate retained input, definition and
+recipe trees in addition to the Controller output root. The Owner contract now
+requires `configuration`, `definitions`, `inputs`, `recipes`, and `outputs`;
+the output resource continues to contain managed inputs/uploads, generated
+assets, reservations, journals and the authority lock. Shared models remain an
+external read-only library. Linux verification: **296 passed** plus Ruff
+check/format for the full source and test trees. The SDK is fixed to merged
+Updater revision `d5ec3408d2a9b43ce44efef6ab8209a6b8ffad25`; PR review and CI at the
+new revision remain pending. No live service or data was changed.

@@ -8,8 +8,12 @@ from .durable import Records
 
 SCHEMAS = {
     "configuration": "controller-config-1",
-    "recipes": "native-recipes-1",
-    "outputs": "generation-assets-1",
+    "definitions": "comfy-definitions-retained-1",
+    "inputs": "provider-inputs-1",
+    "recipes": "generation-recipes-1",
+    # Generated assets, managed input snapshots, upload state, reservations,
+    # journals and the authority lock all live below the Controller output root.
+    "outputs": "generation-state-2",
 }
 
 

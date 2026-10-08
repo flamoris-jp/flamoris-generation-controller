@@ -9,7 +9,7 @@ description = "Shared bounded generation domain and internal HTTP adapter"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
-dependencies = ["flamoris-update-core[owner] @ https://github.com/flamoris-jp/flamoris-updater/archive/d9f010a92ff6e8a1e7a3b7fad8817850bdfb72cd.zip#subdirectory=packages/update-core", "httpx>=0.28,<1", "pydantic>=2.11,<3", "Pillow>=11,<13"]
+dependencies = ["flamoris-update-core[owner] @ https://github.com/flamoris-jp/flamoris-updater/archive/d5ec3408d2a9b43ce44efef6ab8209a6b8ffad25.zip#subdirectory=packages/update-core", "httpx>=0.28,<1", "pydantic>=2.11,<3", "Pillow>=11,<13"]
 
 [project.optional-dependencies]
 http = ["starlette>=0.40,<2"]
