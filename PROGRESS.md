@@ -38,5 +38,5 @@ the output resource continues to contain managed inputs/uploads, generated
 assets, reservations, journals and the authority lock. Shared models remain an
 external read-only library. Linux verification: **296 passed** plus Ruff
 check/format for the full source and test trees. The SDK is fixed to merged
-Updater revision `d5ec3408d2a9b43ce44efef6ab8209a6b8ffad25`; PR review and CI at the
+Updater revision `797d6f4e7bd4089e7c162fa50c10a0afae68370a`; PR review and CI at the
 new revision remain pending. No live service or data was changed.
