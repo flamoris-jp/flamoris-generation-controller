@@ -1,3 +1,9 @@
+# Repository-owned library release preparation — 2026-10-11
+
+The operator requested preparing each repository for Updater installation. Controller publishes its own library wheel/source; Generation MCP embeds its fixed dependency and publishes the runnable image/catalog. No second daemon or authority is introduced. Library publication/CI and real-host acceptance are separate; no host/data/provider actions are performed.
+
+---
+
 # Progress
 
 ## Updater adoption — 2026-10-08
