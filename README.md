@@ -73,7 +73,6 @@ StudioとGeneration MCPが、同じControllerの生成処理・実行予約を�
 
 Code and documentation are [Apache-2.0](LICENSE) unless otherwise stated. Retained domain source originates from FLAMORIS Generation MCP. Models, datasets, media and provider/generated assets may have separate terms. FLAMORIS is provided as-is without guaranteed individual support.
 
-## Updater entry release 1.0.0
+## Updater packaging
 
-See [Updater compatibility](docs/UPDATER.md) for the implemented admission/Owner
-contract and pending signed release/private provisioning/real-host acceptance.
+See [repository-owned library distribution](docs/UPDATER.md). Generation MCP publishes the runnable image and installation catalog; Controller is not a second service.
