@@ -132,6 +132,8 @@ def test_build_requires_every_role_and_declared_models_and_finite_strength(setti
     for change in (
         {"character_strength": float("nan")},
         {"control_end": 0},
+        {"character_strength": True},
+        {"style_strength": "0.6"},
         {"character_adapter": "other.safetensors"},
         {"extra": 1},
         {"character_image": "/private/file.png"},

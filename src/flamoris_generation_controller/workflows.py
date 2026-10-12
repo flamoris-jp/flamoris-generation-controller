@@ -94,15 +94,15 @@ class Conditioning(BaseModel):
     style_adapter: str | None = None
     clip_vision: str | None = None
     controlnet: str | None = None
-    character_strength: float = Field(default=0.8, ge=0, le=5, allow_inf_nan=False)
-    style_strength: float = Field(default=0.6, ge=0, le=5, allow_inf_nan=False)
-    control_strength: float = Field(default=1, ge=0, le=2, allow_inf_nan=False)
-    character_start: float = Field(default=0, ge=0, le=1, allow_inf_nan=False)
-    character_end: float = Field(default=1, ge=0, le=1, allow_inf_nan=False)
-    style_start: float = Field(default=0, ge=0, le=1, allow_inf_nan=False)
-    style_end: float = Field(default=1, ge=0, le=1, allow_inf_nan=False)
-    control_start: float = Field(default=0, ge=0, le=1, allow_inf_nan=False)
-    control_end: float = Field(default=1, ge=0, le=1, allow_inf_nan=False)
+    character_strength: float = Field(default=0.8, ge=0, le=5, allow_inf_nan=False, strict=True)
+    style_strength: float = Field(default=0.6, ge=0, le=5, allow_inf_nan=False, strict=True)
+    control_strength: float = Field(default=1, ge=0, le=2, allow_inf_nan=False, strict=True)
+    character_start: float = Field(default=0, ge=0, le=1, allow_inf_nan=False, strict=True)
+    character_end: float = Field(default=1, ge=0, le=1, allow_inf_nan=False, strict=True)
+    style_start: float = Field(default=0, ge=0, le=1, allow_inf_nan=False, strict=True)
+    style_end: float = Field(default=1, ge=0, le=1, allow_inf_nan=False, strict=True)
+    control_start: float = Field(default=0, ge=0, le=1, allow_inf_nan=False, strict=True)
+    control_end: float = Field(default=1, ge=0, le=1, allow_inf_nan=False, strict=True)
 
     @field_validator("character_adapter", "style_adapter", "clip_vision", "controlnet")
     @classmethod
