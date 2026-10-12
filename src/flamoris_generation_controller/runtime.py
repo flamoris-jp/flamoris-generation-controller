@@ -91,7 +91,9 @@ class GenerationController:
             if settings.yue2_config is not None:
                 providers.register(
                     Yue2Provider(
-                        Yue2Config.read(settings.yue2_config), settings.output_dir / "yue2-staging"
+                        Yue2Config.read(settings.yue2_config),
+                        settings.output_dir / "yue2-staging",
+                        output_root=settings.yue2_output_root,
                     )
                 )
                 capabilities.register(
