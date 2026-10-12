@@ -518,7 +518,7 @@ class Yue2Provider:
                     if (pinned.st_dev, pinned.st_ino) != (current.st_dev, current.st_ino):
                         raise ValueError("Output root changed")
                     for name, content in assets.items():
-                        files.write(name, content)
+                        files.write(name, content, replace=False)
             finally:
                 os.close(root_fd)
         except (OSError, ValueError):

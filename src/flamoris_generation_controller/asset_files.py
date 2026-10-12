@@ -107,7 +107,7 @@ class AssetFiles:
         finally:
             os.close(descriptor)
 
-    def write(self, name: str, data: bytes) -> None:
+    def write(self, name: str, data: bytes, *, replace: bool = True) -> None:
         self._current()
         self.size(name)  # Reject an existing symlink or special file.
         temporary = f".tmp-{uuid.uuid4().hex}"
@@ -121,7 +121,18 @@ class AssetFiles:
             with os.fdopen(fd, "wb") as stream:
                 stream.write(data)
             self._current()
-            os.replace(temporary, name, src_dir_fd=self.fd, dst_dir_fd=self.fd)
+            if replace:
+                os.replace(temporary, name, src_dir_fd=self.fd, dst_dir_fd=self.fd)
+            else:
+                # Exclusive publication stays non-overwriting even if another
+                # writer inserts a destination after the initial size check.
+                os.link(
+                    temporary,
+                    name,
+                    src_dir_fd=self.fd,
+                    dst_dir_fd=self.fd,
+                    follow_symlinks=False,
+                )
         finally:
             try:
                 os.unlink(temporary, dir_fd=self.fd)

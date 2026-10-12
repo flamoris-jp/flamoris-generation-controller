@@ -9,6 +9,7 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
+from flamoris_generation_controller.asset_files import AssetFiles
 from flamoris_generation_controller.config import Settings
 from flamoris_generation_controller.contracts import CallerContext
 from flamoris_generation_controller.music import MusicRecipe, music_descriptor
@@ -554,3 +555,18 @@ async def test_controller_env_publication_keeps_job_and_workflow_roots(
         assert (bundle / "audio.wav").read_bytes() == wav()
     finally:
         await controller.close()
+
+
+def test_exclusive_media_write_refuses_regular_file_and_symlink(tmp_path):
+    with AssetFiles(tmp_path / "published", JOB, group_readable=True) as files:
+        files.write("audio.wav", b"operator original")
+        with pytest.raises(FileExistsError):
+            files.write("audio.wav", b"replacement", replace=False)
+        assert files.read("audio.wav", 100) == b"operator original"
+        outside = tmp_path / "outside.wav"
+        outside.write_bytes(b"outside")
+        (tmp_path / "published" / JOB / "score.abc").symlink_to(outside)
+        with pytest.raises(ValueError, match="symlink"):
+            files.write("score.abc", b"replacement", replace=False)
+        assert outside.read_bytes() == b"outside"
+    assert not list((tmp_path / "published" / JOB).glob(".tmp-*"))
