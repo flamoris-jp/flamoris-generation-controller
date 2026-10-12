@@ -58,6 +58,12 @@ class Job(Request):
     job_id: OpaqueID
 
 
+class ExternalJobs(Request):
+    actor: ExternalProvenance
+    after: Annotated[int, Field(ge=0, le=2**53 - 1)] = 0
+    limit: Annotated[int, Field(ge=1, le=16)] = 8
+
+
 class Asset(Request):
     asset_id: OpaqueID
 
@@ -117,6 +123,9 @@ OPERATIONS: dict[str, type[Request]] = {
 }
 
 
+INTERNAL_OPERATIONS = {**OPERATIONS, "jobs.external.list": ExternalJobs}
+
+
 @dataclass(frozen=True)
 class CallerContext:
     """Trusted adapter value, never accepted from request JSON or identity headers.
@@ -131,7 +140,7 @@ class CallerContext:
 
     @classmethod
     def internal(cls):
-        return cls("internal-service", frozenset(OPERATIONS))
+        return cls("internal-service", frozenset(INTERNAL_OPERATIONS))
 
     @classmethod
     def external(cls, provenance: ExternalProvenance | None = None):

@@ -20,6 +20,164 @@ BUILD = {
     "parameters": {"checkpoint": "base.safetensors", "positive_prompt": "flowers"},
 }
 
+ACTOR = {"issuer": "hub.example", "subject": "client-a"}
+
+
+async def test_external_discovery_is_internal_only_even_with_forged_permissions(controller, http):
+    from flamoris_generation_controller.contracts import OPERATIONS
+
+    assert len(OPERATIONS) == 25
+    assert "jobs.external.list" not in OPERATIONS
+    for context in (
+        CallerContext.external(),
+        CallerContext("external-mcp", frozenset({"jobs.external.list"})),
+    ):
+        with pytest.raises(ControllerError, match="forbidden"):
+            await controller.invoke("jobs.external.list", {"actor": ACTOR}, context=context)
+    response = await http.post("jobs.external.list", json={"actor": ACTOR})
+    assert response.status_code == 200
+    assert response.json() == {"jobs": [], "next_cursor": 0, "has_more": False}
+    assert (
+        await http.post(
+            "jobs.external.list", json={"actor": ACTOR}, headers={"Authorization": "Bearer foreign"}
+        )
+    ).status_code == 401
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"after": True},
+        {"after": -1},
+        {"limit": 17},
+        {"user_id": "spoof"},
+        {"actor": {**ACTOR, "owner": "spoof"}},
+    ],
+)
+async def test_external_discovery_rejects_untrusted_arguments(http, extra):
+    response = await http.post("jobs.external.list", json={"actor": ACTOR, **extra})
+    assert response.status_code == 400
+
+
+async def test_external_discovery_completes_only_matching_active_work_and_survives_restart(
+    controller, fake, settings
+):
+    from flamoris_generation_controller.provenance import ExternalProvenance
+
+    recipe = await controller.invoke("workflows.build", BUILD, context=CallerContext.internal())
+    job = await controller.invoke(
+        "jobs.submit",
+        {"workflow_id": recipe["workflow_id"]},
+        context=CallerContext.external(ExternalProvenance(**ACTOR)),
+    )
+    count = len(fake.calls)
+    other = {**ACTOR, "subject": "client-b"}
+    assert (
+        await controller.invoke(
+            "jobs.external.list", {"actor": other}, context=CallerContext.internal()
+        )
+    )["jobs"] == []
+    assert len(fake.calls) == count
+    assert (
+        await controller.invoke(
+            "jobs.external.list", {"actor": ACTOR}, context=CallerContext.internal()
+        )
+    )["jobs"] == []
+    fake.finish()
+    listing = await controller.invoke(
+        "jobs.external.list", {"actor": ACTOR}, context=CallerContext.internal()
+    )
+    assert listing == {
+        "jobs": [{"job_id": job["job_id"], "sequence": 1}],
+        "next_cursor": 1,
+        "has_more": False,
+    }
+    assert fake.download_count == 0 and len(fake.prompts) == 1
+    assert (
+        await controller.invoke(
+            "jobs.external.list", {"actor": ACTOR, "after": 1}, context=CallerContext.internal()
+        )
+    )["jobs"] == []
+    await controller.close()
+    restarted = GenerationController(settings, transport=httpx.MockTransport(fake.handle))
+    try:
+        assert (
+            await restarted.invoke(
+                "jobs.external.list", {"actor": ACTOR}, context=CallerContext.internal()
+            )
+            == listing
+        )
+        assert (
+            await restarted.invoke(
+                "jobs.status", {"job_id": job["job_id"]}, context=CallerContext.internal()
+            )
+        )["external_provenance"] == ACTOR
+        assert fake.download_count == 0 and len(fake.prompts) == 1
+    finally:
+        await restarted.close()
+
+
+async def test_external_discovery_does_not_poll_anonymous_or_retired_reservations(controller, fake):
+    recipe = await controller.invoke("workflows.build", BUILD, context=CallerContext.internal())
+    await controller.invoke(
+        "jobs.submit", {"workflow_id": recipe["workflow_id"]}, context=CallerContext.external()
+    )
+    count = len(fake.calls)
+    fake.finish()
+    assert (
+        await controller.invoke(
+            "jobs.external.list", {"actor": ACTOR}, context=CallerContext.internal()
+        )
+    )["jobs"] == []
+    assert len(fake.calls) == count
+    controller.jobs._retired_active = {"job_id": "f" * 32, "status": "unknown"}
+    controller.jobs._active_job_id = "f" * 32
+    assert (
+        await controller.invoke(
+            "jobs.external.list", {"actor": ACTOR}, context=CallerContext.internal()
+        )
+    )["jobs"] == []
+    assert len(fake.calls) == count
+
+
+async def test_external_discovery_pagination_and_corruption_fail_closed(controller):
+    jobs = [
+        {
+            "job_id": f"{i:032x}",
+            "sequence": i,
+            "actor": ACTOR if i % 2 else {**ACTOR, "subject": "foreign"},
+        }
+        for i in range(1, 1025)
+    ]
+    controller.jobs._authority.write(
+        "external-index.json", {"version": 1, "sequence": 1024, "jobs": jobs}
+    )
+    first = await controller.invoke(
+        "jobs.external.list", {"actor": ACTOR, "limit": 2}, context=CallerContext.internal()
+    )
+    assert first == {
+        "jobs": [{"job_id": f"{i:032x}", "sequence": i} for i in (1, 3)],
+        "next_cursor": 3,
+        "has_more": True,
+    }
+    last = await controller.invoke(
+        "jobs.external.list",
+        {"actor": ACTOR, "after": 1021, "limit": 2},
+        context=CallerContext.internal(),
+    )
+    assert last == {
+        "jobs": [{"job_id": f"{1023:032x}", "sequence": 1023}],
+        "next_cursor": 1024,
+        "has_more": False,
+    }
+    controller.jobs._authority.write(
+        "external-index.json", {"version": 1, "sequence": 1024, "jobs": [jobs[0], jobs[0]]}
+    )
+    with pytest.raises(ValueError, match="Invalid external discovery index"):
+        await controller.invoke(
+            "jobs.external.list", {"actor": ACTOR}, context=CallerContext.internal()
+        )
+
 
 @pytest.fixture
 async def controller(settings, fake):

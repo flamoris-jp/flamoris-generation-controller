@@ -46,3 +46,8 @@ external read-only library. Linux verification: **296 passed** plus Ruff
 check/format for the full source and test trees. The SDK is fixed to merged
 Updater revision `797d6f4e7bd4089e7c162fa50c10a0afae68370a`; PR review and CI at the
 new revision remain pending. No live service or data was changed.
+
+
+## 2026-10-13 — linked external gallery (source preparation)
+
+Controller #16 adds internal-only `jobs.external.list` and a bounded durable recent index. Exact actor isolation, strict permissions/arguments, metadata-only completion observation, restart, pagination and corrupt-index rejection are covered by deterministic tests. Source preparation is not yet merged or deployed; the matched Generation pin and Studio #86 integration are required.

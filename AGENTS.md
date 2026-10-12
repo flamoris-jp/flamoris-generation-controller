@@ -46,3 +46,8 @@ Run core/domain/API tests, lint/format and installed-wheel checks without MCP. M
 Live deployment, runtime changes, data/grant/credential mutation, paid calls and reference-image expansion are separate scopes. Use flamoris-server-manager for current infrastructure facts when an operational task requires them.
 
 Use focused commits and review final text/code. Merges require explicit user authorization; respect authorization already given for the applicable task. Do not force-push shared branches. Follow the [repository policy](https://github.com/flamoris-jp/flamoris-commons/blob/main/docs/repository-policy.md), keep public documentation portable and preserve licenses and model/provider terms.
+
+
+## 2026-10-13 linked external gallery scope
+
+Controller #16 / Studio #86 implement internal-only bounded external discovery and the linked per-account gallery. The user explicitly requests implementation through release and live changes. Preserve the 25 external tools, trusted provenance, existing single-owner/unknown fences and output placement. The new index is only a recent receipt, never a competing state owner or Studio ACL. Matched source review/tests and live credential/binding acceptance must be recorded separately.
