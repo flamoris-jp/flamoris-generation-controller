@@ -12,7 +12,6 @@ from pydantic import ValidationError
 from flamoris_generation_controller.config import Settings
 from flamoris_generation_controller.contracts import CallerContext
 from flamoris_generation_controller.music import MusicRecipe, music_descriptor
-from flamoris_generation_controller.runtime import GenerationController
 from flamoris_generation_controller.providers import yue2
 from flamoris_generation_controller.providers.base import (
     GenerationRequest,
@@ -20,6 +19,7 @@ from flamoris_generation_controller.providers.base import (
     SubmissionRejected,
     SubmissionUnknown,
 )
+from flamoris_generation_controller.runtime import GenerationController
 
 EXECUTION = "a" * 16
 JOB = "b" * 32
@@ -430,7 +430,9 @@ async def test_optional_publication_groups_music_and_keeps_private_stage(provide
     assert stat.S_IMODE((stage / "audio.wav").stat().st_mode) == 0o600
     assert (bundle / "audio.wav").read_bytes() == await provider.materialize(EXECUTION, "audio")
     assert (bundle / "score.abc").read_bytes() == await provider.materialize(EXECUTION, "score")
-    assert (bundle / "replay.json").read_bytes() == await provider.materialize(EXECUTION, "metadata")
+    assert (bundle / "replay.json").read_bytes() == await provider.materialize(
+        EXECUTION, "metadata"
+    )
 
     # Human copies are never the source of API bytes. Repeated status calls do
     # not recreate a copy that its operator deliberately moved/deleted.
