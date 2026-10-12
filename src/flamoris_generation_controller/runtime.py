@@ -11,7 +11,7 @@ from .authority import Authority
 from .capabilities import Capability, CapabilityRegistry
 from .comfyui import ComfyUIClient
 from .config import Settings
-from .contracts import OPERATIONS, AssetContent, CallerContext, ControllerError
+from .contracts import INTERNAL_OPERATIONS, OPERATIONS, AssetContent, CallerContext, ControllerError
 from .input_uploads import InputUploads
 from .inputs import ManagedInputs
 from .jobs import JobStore
@@ -205,10 +205,12 @@ class GenerationController:
     async def invoke(self, operation: str, arguments: dict, *, context: CallerContext):
         if not isinstance(context, CallerContext) or operation not in context.permissions:
             raise ControllerError("forbidden")
+        if operation not in OPERATIONS and context.source != "internal-service":
+            raise ControllerError("forbidden")
         if self._closed:
             raise ControllerError("authority_unavailable")
         self.owner.check()
-        request_type = OPERATIONS.get(operation)
+        request_type = INTERNAL_OPERATIONS.get(operation)
         if request_type is None:
             raise ControllerError("unknown_operation")
         args = request_type.model_validate(arguments).model_dump()
@@ -247,6 +249,7 @@ class GenerationController:
                 "comfy.register": self.workflows.definitions.register,
                 "comfy.get": self.workflows.definitions.inspect,
                 "jobs.status": self.jobs.status,
+                "jobs.external.list": self.jobs.list_external,
                 "jobs.result": self.jobs.result,
                 "jobs.cancel": self.jobs.cancel,
                 "assets.list": self.jobs.list_assets,

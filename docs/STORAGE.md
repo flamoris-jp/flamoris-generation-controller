@@ -65,3 +65,8 @@ journals or the lifetime lock while a Controller is alive. Record exact host pat
 and mount mappings in private operational documentation so later cleanup can find
 all copies. Model weights, inputs, caches and native runtime installations are
 unaffected by publication.
+
+
+## External discovery receipts
+
+`FLAMORIS_OUTPUT_DIR/job-authority/external-index.json` is a bounded private recent index (maximum 1,024 completed external jobs) used by the internal service discovery API. It records only job ID, monotonic sequence and verified non-secret issuer/subject. It is not a new job authority, user ACL or a media folder. Keep it with private job records; deleting it loses automatic historical discovery, while exact-job metadata/import and retained media remain separate. Existing reservations, job directories and operator-selected human output paths are unchanged.
