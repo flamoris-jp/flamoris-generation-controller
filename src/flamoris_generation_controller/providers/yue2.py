@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import json
+import logging
 import math
 import os
 import re
@@ -10,6 +11,7 @@ import stat
 import struct
 import time
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -259,13 +261,17 @@ class _Run:
     timed_out: bool = False
     digests: dict[str, str] = field(default_factory=dict)
     deadline_worker: asyncio.Task | None = None
+    output_stamp: str = field(default_factory=lambda: datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"))
 
 
 class Yue2Provider:
     provider_id = "yue2"
 
-    def __init__(self, config: Yue2Config, stage_root: Path, *, client=None):
+    def __init__(
+        self, config: Yue2Config, stage_root: Path, *, client=None, output_root: Path | None = None
+    ):
         self.config, self.stage_root = config, stage_root.absolute()
+        self.output_root = output_root.absolute() if output_root is not None else None
         self.client = client or httpx.AsyncClient(
             timeout=config.timeout_seconds,
             follow_redirects=False,
@@ -457,6 +463,7 @@ class Yue2Provider:
                 for name, content in assets.items():
                     files.write(name, content)
                     run.digests[name] = hashlib.sha256(content).hexdigest()
+            publication = self._publish_outputs(run, assets)
             return JobSnapshot(
                 status="completed",
                 outputs=(
@@ -475,6 +482,7 @@ class Yue2Provider:
                     ),
                 ),
                 metadata={
+                    **({"output_publication": publication} if publication is not None else {}),
                     "audio": audio_metadata,
                     "music": {
                         **music_profile(),
@@ -487,6 +495,38 @@ class Yue2Provider:
         except Exception:
             # The accepted execution is terminal even when its artifacts are invalid.
             return JobSnapshot(status="failed", error={"code": "music_output_invalid"})
+
+    def _publish_outputs(self, run, assets):
+        """Write human-readable copies once; never read them as authoritative assets."""
+        if self.output_root is None:
+            return None
+        directory = f"{run.output_stamp}-{run.job_id}"
+        try:
+            # The operator supplies an existing dedicated root/mount. No implicit
+            # parent creation and no symlink root; mkdir exclusively reserves a
+            # fresh bundle so existing operator files are never overwritten.
+            flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+            root_fd = os.open(self.output_root, flags)
+            try:
+                os.mkdir(directory, mode=0o750, dir_fd=root_fd)
+                with AssetFiles(
+                    self.output_root, directory, create=False, group_readable=True
+                ) as files:
+                    # Pin the same root throughout publication, including a
+                    # rename/replacement between mkdir and AssetFiles opening.
+                    pinned, current = os.fstat(root_fd), os.fstat(files.root_fd)
+                    if (pinned.st_dev, pinned.st_ino) != (current.st_dev, current.st_ino):
+                        raise ValueError("Output root changed")
+                    for name, content in assets.items():
+                        files.write(name, content)
+            finally:
+                os.close(root_fd)
+        except (OSError, ValueError):
+            # Generation already succeeded and its private bounded copies are
+            # intact. Publication failure must not release/replay or hide them.
+            logging.getLogger(__name__).warning("YuE2 output publication failed")
+            return {"status": "failed"}
+        return {"status": "written"}
 
     async def inspect(self, execution_id):
         run = self._get(execution_id)

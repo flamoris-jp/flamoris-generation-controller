@@ -12,10 +12,15 @@ from pathlib import Path
 
 
 class AssetFiles:
-    def __init__(self, root: Path, job_id: str, *, create: bool = True):
+    def __init__(
+        self, root: Path, job_id: str, *, create: bool = True, group_readable: bool = False
+    ):
         self.root = root
         self.job_id = job_id
         self.create = create
+        # Opt-in only for operator-readable output copies; journals stay private.
+        self.directory_mode = 0o750 if group_readable else 0o700
+        self.file_mode = 0o640 if group_readable else 0o600
 
     def __enter__(self):
         if self.create:
@@ -30,7 +35,7 @@ class AssetFiles:
         try:
             if self.create:
                 try:
-                    os.mkdir(self.job_id, mode=0o700, dir_fd=self.root_fd)
+                    os.mkdir(self.job_id, mode=self.directory_mode, dir_fd=self.root_fd)
                 except FileExistsError:
                     pass
             try:
@@ -107,7 +112,10 @@ class AssetFiles:
         self.size(name)  # Reject an existing symlink or special file.
         temporary = f".tmp-{uuid.uuid4().hex}"
         fd = os.open(
-            temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=self.fd
+            temporary,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+            self.file_mode,
+            dir_fd=self.fd,
         )
         try:
             with os.fdopen(fd, "wb") as stream:

@@ -1,13 +1,18 @@
 import asyncio
 import io
 import json
+import os
+import stat
 import wave
 
 import httpx
 import pytest
 from pydantic import ValidationError
 
+from flamoris_generation_controller.config import Settings
+from flamoris_generation_controller.contracts import CallerContext
 from flamoris_generation_controller.music import MusicRecipe, music_descriptor
+from flamoris_generation_controller.runtime import GenerationController
 from flamoris_generation_controller.providers import yue2
 from flamoris_generation_controller.providers.base import (
     GenerationRequest,
@@ -398,3 +403,152 @@ def test_music_recipe_rejects_unsafe_or_unbounded_inputs(parameters):
 def test_only_deployed_source_contract_can_be_configured():
     with pytest.raises(ValidationError):
         yue2.Yue2Config(url="http://provider", source_revision="wrong", model_revision="test")
+
+
+async def test_optional_publication_groups_music_and_keeps_private_stage(provider, tmp_path):
+    root = tmp_path / "generated" / "yue2"
+    root.mkdir(parents=True)
+    provider.output_root = root
+    await provider.submit(request(), JOB)
+    provider.test_server.state = "done"
+    previous_umask = os.umask(0o022)
+    try:
+        snapshot = await provider.inspect(EXECUTION)
+    finally:
+        os.umask(previous_umask)
+    assert snapshot.status == "completed"
+    assert snapshot.metadata["output_publication"] == {"status": "written"}
+    bundles = list(root.iterdir())
+    assert len(bundles) == 1
+    bundle = bundles[0]
+    assert bundle.name.endswith("-" + JOB)
+    assert set(path.name for path in bundle.iterdir()) == {"audio.wav", "score.abc", "replay.json"}
+    assert stat.S_IMODE(bundle.stat().st_mode) == 0o750
+    assert stat.S_IMODE((bundle / "audio.wav").stat().st_mode) == 0o640
+    stage = provider.stage_root / JOB
+    assert stat.S_IMODE(stage.stat().st_mode) == 0o700
+    assert stat.S_IMODE((stage / "audio.wav").stat().st_mode) == 0o600
+    assert (bundle / "audio.wav").read_bytes() == await provider.materialize(EXECUTION, "audio")
+    assert (bundle / "score.abc").read_bytes() == await provider.materialize(EXECUTION, "score")
+    assert (bundle / "replay.json").read_bytes() == await provider.materialize(EXECUTION, "metadata")
+
+    # Human copies are never the source of API bytes. Repeated status calls do
+    # not recreate a copy that its operator deliberately moved/deleted.
+    (bundle / "audio.wav").unlink()
+    (bundle / "score.abc").write_text("operator edited score")
+    assert await provider.materialize(EXECUTION, "audio") == wav()
+    assert b"K:C" in await provider.materialize(EXECUTION, "score")
+    assert (await provider.inspect(EXECUTION)).status == "completed"
+    assert len(list(root.iterdir())) == 1
+    assert not (bundle / "audio.wav").exists()
+
+
+async def test_unset_publication_retains_original_behavior(provider):
+    await provider.submit(request(), JOB)
+    provider.test_server.state = "done"
+    snapshot = await provider.inspect(EXECUTION)
+    assert snapshot.status == "completed"
+    assert "output_publication" not in snapshot.metadata
+    assert provider.output_root is None
+    assert await provider.materialize(EXECUTION, "audio") == wav()
+
+
+@pytest.mark.parametrize("unavailable", ["missing", "symlink", "file", "collision"])
+async def test_publication_failure_preserves_completed_private_assets(
+    provider, tmp_path, unavailable, caplog
+):
+    root = tmp_path / "generated"
+    provider.output_root = root
+    if unavailable == "symlink":
+        target = tmp_path / "outside"
+        target.mkdir()
+        root.symlink_to(target, target_is_directory=True)
+    elif unavailable == "file":
+        root.write_bytes(b"operator file")
+    elif unavailable == "collision":
+        root.mkdir()
+    await provider.submit(request(), JOB)
+    run = provider._runs[EXECUTION]
+    run.output_stamp = "20261012T120000Z"
+    if unavailable == "collision":
+        existing = root / (run.output_stamp + "-" + JOB)
+        existing.mkdir()
+        (existing / "audio.wav").write_bytes(b"operator file")
+    provider.test_server.state = "done"
+    snapshot = await provider.inspect(EXECUTION)
+    assert snapshot.status == "completed"
+    assert snapshot.metadata["output_publication"] == {"status": "failed"}
+    assert "YuE2 output publication failed" in caplog.text
+    assert await provider.materialize(EXECUTION, "audio") == wav()
+    assert sum(call.url.path == "/synth" for call in provider.test_server.calls) == 1
+    assert (await provider.inspect(EXECUTION)).status == "completed"
+    if unavailable == "missing":
+        assert not root.exists()
+    elif unavailable == "symlink":
+        assert list(target.iterdir()) == []
+    elif unavailable == "file":
+        assert root.read_bytes() == b"operator file"
+    else:
+        assert (existing / "audio.wav").read_bytes() == b"operator file"
+        assert set(path.name for path in existing.iterdir()) == {"audio.wav"}
+
+
+async def test_controller_env_publication_keeps_job_and_workflow_roots(
+    settings, fake, tmp_path, monkeypatch
+):
+    config = tmp_path / "yue2.json"
+    config.write_text(
+        json.dumps(
+            {
+                "url": "http://provider.test",
+                "source_revision": yue2.YUE2_SOURCE_REVISION,
+                "model_revision": "fixture-BF16",
+            }
+        )
+    )
+    root = tmp_path / "generated" / "yue2"
+    root.mkdir(parents=True)
+    monkeypatch.setenv("FLAMORIS_YUE2_OUTPUT_ROOT", str(root))
+    configured = Settings.from_env(
+        model_root=settings.model_root,
+        workflow_dir=settings.workflow_dir,
+        output_dir=settings.output_dir,
+        yue2_config=config,
+    )
+    server = Server()
+    client = httpx.AsyncClient(transport=httpx.MockTransport(server))
+
+    def provider_factory(config, stage_root, *, output_root):
+        return yue2.Yue2Provider(config, stage_root, client=client, output_root=output_root)
+
+    monkeypatch.setattr("flamoris_generation_controller.runtime.Yue2Provider", provider_factory)
+    controller = GenerationController(configured, transport=httpx.MockTransport(fake.handle))
+    context = CallerContext.internal()
+    try:
+        recipe = await controller.invoke(
+            "workflows.build",
+            {"template": "music-generate", "parameters": {"style": "quiet piano"}},
+            context=context,
+        )
+        accepted = await controller.invoke(
+            "jobs.submit", {"workflow_id": recipe["workflow_id"]}, context=context
+        )
+        job_id = accepted["job_id"]
+        server.state = "done"
+        result = await controller.invoke("jobs.result", {"job_id": job_id}, context=context)
+        assert result["status"] == "completed"
+        assert configured.output_dir == settings.output_dir
+        assert configured.workflow_dir == settings.workflow_dir
+        assert (settings.output_dir / "job-authority").is_dir()
+        assert (settings.output_dir / "yue2-staging" / job_id / "audio.wav").read_bytes() == wav()
+        assert (settings.output_dir / job_id / "000.wav").read_bytes() == wav()
+        bundle = next(root.iterdir())
+        assert (bundle / "audio.wav").read_bytes() == wav()
+        assets = await controller.invoke("assets.list", {"job_id": job_id}, context=context)
+        audio_id = assets["assets"][0]["asset_id"]
+        deleted = await controller.invoke("assets.delete", {"asset_id": audio_id}, context=context)
+        assert deleted["deleted"]
+        assert not (settings.output_dir / job_id / "000.wav").exists()
+        assert (bundle / "audio.wav").read_bytes() == wav()
+    finally:
+        await controller.close()
