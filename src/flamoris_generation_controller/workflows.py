@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .models import ModelCatalog, model_name
 from .music import (
@@ -88,7 +88,61 @@ class RegisteredRecipe(BaseModel):
     reference_image: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
 
 
-AnyRecipe = Recipe | RegisteredRecipe | SpeechRecipe | MusicRecipe | TranscriptionRecipe
+class Conditioning(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    character_adapter: str | None = None
+    style_adapter: str | None = None
+    clip_vision: str | None = None
+    controlnet: str | None = None
+    character_strength: float = Field(default=0.8, ge=0, le=5, allow_inf_nan=False)
+    style_strength: float = Field(default=0.6, ge=0, le=5, allow_inf_nan=False)
+    control_strength: float = Field(default=1, ge=0, le=2, allow_inf_nan=False)
+    character_start: float = Field(default=0, ge=0, le=1, allow_inf_nan=False)
+    character_end: float = Field(default=1, ge=0, le=1, allow_inf_nan=False)
+    style_start: float = Field(default=0, ge=0, le=1, allow_inf_nan=False)
+    style_end: float = Field(default=1, ge=0, le=1, allow_inf_nan=False)
+    control_start: float = Field(default=0, ge=0, le=1, allow_inf_nan=False)
+    control_end: float = Field(default=1, ge=0, le=1, allow_inf_nan=False)
+
+    @field_validator("character_adapter", "style_adapter", "clip_vision", "controlnet")
+    @classmethod
+    def names(cls, value):
+        return model_name(value) if value is not None else None
+
+    @model_validator(mode="after")
+    def intervals(self):
+        for role in ("character", "style", "control"):
+            if getattr(self, role + "_start") >= getattr(self, role + "_end"):
+                raise ValueError("Reference start must precede end")
+        if bool(self.character_adapter or self.style_adapter) != bool(self.clip_vision):
+            raise ValueError("IPAdapter requires an explicit CLIP Vision model")
+        return self
+
+
+class ReferenceRecipe(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    schema_version: Literal[8] = 8
+    template: Literal["registered-comfy"] = "registered-comfy"
+    definition_id: str = Field(pattern=r"^comfy-[a-f0-9]{64}$")
+    parameters: Parameters
+    conditioning: Conditioning
+    images: dict[str, str] = Field(min_length=1, max_length=4)
+
+    @field_validator("images")
+    @classmethod
+    def references(cls, value):
+        import re
+
+        if set(value) - {"initial_image", "character_image", "style_image", "control_image"} or any(
+            re.fullmatch(r"[a-f0-9]{32}", v) is None for v in value.values()
+        ):
+            raise ValueError("Invalid managed reference images")
+        return value
+
+
+AnyRecipe = (
+    Recipe | RegisteredRecipe | ReferenceRecipe | SpeechRecipe | MusicRecipe | TranscriptionRecipe
+)
 NATIVE_RECIPES = (SpeechRecipe, MusicRecipe, TranscriptionRecipe)
 
 
@@ -312,8 +366,7 @@ class WorkflowStore:
         }
         if registered:
             recipe = self.definitions.build(template, parameters)
-            self.catalog.require("checkpoint", recipe.parameters.checkpoint)
-            prompt = self.definitions.prompt(recipe)
+            prompt = self.prompt(recipe)
         elif template in native:
             enabled, recipe_type = native[template]
             if not enabled:
@@ -369,6 +422,8 @@ class WorkflowStore:
             raise RetiredRecipeError("Custom ComfyWorkFlow recipe execution is retired")
         if schema == 7:
             return RegisteredRecipe.model_validate(data)
+        if schema == 8:
+            return ReferenceRecipe.model_validate(data)
         native = {
             4: (self.speech_enabled, SpeechRecipe),
             5: (self.music_enabled, MusicRecipe),
@@ -391,15 +446,22 @@ class WorkflowStore:
             }[type(recipe)]
             if not enabled:
                 raise ValueError("Native recipe is disabled")
-        elif not isinstance(recipe, (Recipe, RegisteredRecipe)):
+        elif not isinstance(recipe, (Recipe, RegisteredRecipe, ReferenceRecipe)):
             raise RetiredRecipeError("Custom ComfyWorkFlow recipe execution is retired")
 
     def prompt(self, recipe: AnyRecipe, job_id: str | None = None) -> dict:
         if isinstance(recipe, NATIVE_RECIPES):
             raise ValueError("Native recipe has no ComfyUI prompt")
         self._require_supported_recipe(recipe)
-        if isinstance(recipe, RegisteredRecipe):
+        if isinstance(recipe, (RegisteredRecipe, ReferenceRecipe)):
             self.catalog.require("checkpoint", recipe.parameters.checkpoint)
+            if isinstance(recipe, ReferenceRecipe):
+                from .reference_comfy import MODEL_KINDS
+
+                for key, kind in MODEL_KINDS.items():
+                    value = getattr(recipe.conditioning, key)
+                    if value:
+                        self.catalog.require(kind, value)
             return self.definitions.prompt(recipe, job_id)
         prompt = build_prompt(recipe, self.catalog)
         if job_id is not None:

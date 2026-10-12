@@ -4,6 +4,9 @@ This repository is the owner of FLAMORIS generation-domain code. It contains the
 
 ## Current task and sequencing
 
+The 2026-10-12 user request explicitly resumes source development for img2img, IPAdapter appearance/style, prepared-map ControlNet and matching Studio integration under #13 / Studio #79. It supersedes older reference-expansion holds for this slice. Use docs/REFERENCE_IMAGES.md; source, tests, documentation and reviewable PRs are authorized. Live deployment, model downloads/inference and merges remain separately authorized.
+
+
 Controller extraction and the subsequent bounded ComfyWorkFlow registration/reference-image profile are accepted in main through Controller #5/#7 and matched callers, after explicit merge instructions. See AI PROGRESS §4.8/§4.9. The current request aligns documentation and postpones live acceptance. Live cutover, data/grants/credentials, paid calls and further generation features remain separate scopes. Future merges require applicable explicit user authorization.
 
 The selected initial host is one Controller object inside the Generation MCP HTTP process, shared by external MCP and authenticated internal HTTP adapters. The output-root lifetime ownership lock must be acquired before provider construction or recovery. Keep the exact API/service-permission decisions in docs/API.md and Controller #1; never create another runtime per caller/session.

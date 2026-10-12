@@ -5,6 +5,14 @@ import json
 import re
 from copy import deepcopy
 
+from .reference_comfy import (
+    ReferenceDefaults,
+    ReferenceRecipe,
+    active_fields,
+    build_reference,
+    conditioning_prompt,
+    validate_reference_graph,
+)
 from .workflows import (
     Parameters,
     Recipe,
@@ -55,7 +63,7 @@ def validate_graph(graph):
     unused side-effect node can pass this comparison. Parameter widgets are the
     only varying values. A reference slot is a literal placeholder, never a path.
     """
-    if type(graph) is not dict or not 7 <= len(graph) <= 10:
+    if type(graph) is not dict or not 7 <= len(graph) <= 24:
         raise ValueError("Unsupported ComfyWorkFlow graph profile")
     if len(json.dumps(graph, allow_nan=False).encode()) > MAX_DEFINITION_BYTES:
         raise ValueError("ComfyWorkFlow graph exceeds byte limit")
@@ -71,6 +79,11 @@ def validate_graph(graph):
         ):
             raise ValueError("Invalid ComfyWorkFlow API-format node")
         classes.setdefault(node["class_type"], []).append(node_id)
+    if "IPAdapterAdvanced" in classes or "ControlNetApplyAdvanced" in classes:
+        try:
+            return validate_reference_graph(graph)
+        except (KeyError, IndexError, TypeError, ValueError, StopIteration, RecursionError):
+            raise ValueError("Unsupported reference conditioning graph") from None
     reference = "LoadImage" in classes
     expected = {
         "CheckpointLoaderSimple": "1",
@@ -194,11 +207,35 @@ class ComfyDefinitions:
                 },
             }
         )
+        conditioned = isinstance(defaults, ReferenceDefaults)
+        image_defaults = defaults.parameters if conditioned else defaults
         base["image"].update(
-            {"profile": "checkpoint-comfy-v1", "mode": "img2img" if reference else "txt2img"}
+            {
+                "profile": "checkpoint-reference-v1" if conditioned else "checkpoint-comfy-v1",
+                "mode": "img2img"
+                if ("initial_image" in defaults.roles if conditioned else reference)
+                else "txt2img",
+            }
         )
         for key, spec in base["parameters"].items():
-            spec.update({"required": False, "default": getattr(defaults, key)})
+            spec.update({"required": False, "default": image_defaults.model_dump(mode="json")[key]})
+        base["parameters"]["loras"].update(max_items=0, min_items=0)
+        if conditioned:
+            base["parameters"]["checkpoint"]["enum"] = [image_defaults.checkpoint]
+            base["parameters"].update(active_fields(defaults))
+            base["image"]["reference_roles"] = list(defaults.roles)
+            base["image"]["control_input"] = (
+                "prepared-map" if "control_image" in defaults.roles else None
+            )
+            for role in defaults.roles:
+                base["parameters"][role] = {
+                    "type": "string",
+                    "role": role,
+                    "required": True,
+                    "pattern": "^[a-f0-9]{32}$",
+                    "mime_types": ["image/png", "image/jpeg", "image/webp"],
+                }
+            return base
         if reference:
             base["parameters"]["reference_image"] = {
                 "type": "string",
@@ -223,6 +260,8 @@ class ComfyDefinitions:
 
     def build(self, definition_id, parameters):
         _name, _graph, defaults, reference = self.get(definition_id)
+        if isinstance(defaults, ReferenceDefaults):
+            return build_reference(definition_id, defaults, parameters)
         values = dict(parameters)
         input_id = values.pop("reference_image", None)
         if (
@@ -239,7 +278,23 @@ class ComfyDefinitions:
         )
 
     def prompt(self, recipe, job_id=None):
-        _name, _graph, _defaults, reference = self.get(recipe.definition_id)
+        _name, _graph, defaults, reference = self.get(recipe.definition_id)
+        if isinstance(recipe, ReferenceRecipe):
+            if not isinstance(defaults, ReferenceDefaults) or set(recipe.images) != set(
+                defaults.roles
+            ):
+                raise ValueError("Reference recipe contract changed")
+            if recipe.parameters.checkpoint != defaults.parameters.checkpoint or any(
+                getattr(recipe.conditioning, key) != getattr(defaults.conditioning, key)
+                for key in ("character_adapter", "style_adapter", "clip_vision", "controlnet")
+            ):
+                raise ValueError("Reference model identity changed")
+            prompt = conditioning_prompt(recipe.parameters, recipe.conditioning, defaults.roles)
+            if job_id is not None:
+                prompt["7"]["inputs"]["filename_prefix"] = "flamoris/" + job_id
+            return prompt
+        if isinstance(defaults, ReferenceDefaults):
+            raise ValueError("Reference recipe schema mismatch")
         if reference != (recipe.reference_image is not None):
             raise ValueError("ComfyWorkFlow reference binding mismatch")
         prompt = image_prompt(recipe.parameters, reference=reference)

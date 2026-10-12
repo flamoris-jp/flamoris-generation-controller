@@ -1,3 +1,3 @@
-# FLAMORIS Generation Controller v1.0.0
+# Controller v1.0.1 — release preparation
 
-This repository publishes the Controller library wheel/source. Generation MCP embeds the pinned Controller package and owns the runnable process and installer catalog. Do not install a second Controller authority for the same output root. No extra daemon, port, live deployment or provider call is added.
+Adds bounded IPAdapter appearance/style and prepared-map ControlNet ComfyWorkFlow profiles, four managed reference roles, schema-8 recipes and a local graph-writing CLI. Retains schema-7 img2img and existing Job/Input/Asset authority. Includes concrete graphs and model/setup guidance. Publication, host compatibility and actual generation are separate from this source change.
