@@ -50,6 +50,8 @@ operator directory while retaining private job/workflow storage. See
 [generated media and private job storage](docs/STORAGE.md) for configuration,
 permissions, failure behavior and deletion boundaries.
 
+The optional [resident Irodori HTTP transport](docs/IRODORI_HTTP.md) connects the existing Speech recipe to an already running API, with a distinct contract profile and bounded WAV results.
+
 ## Development and evidence
 
 ```sh
@@ -81,3 +83,4 @@ Code and documentation are [Apache-2.0](LICENSE) unless otherwise stated. Retain
 ## Updater packaging
 
 See [repository-owned library distribution](docs/UPDATER.md). Generation MCP publishes the runnable image and installation catalog; Controller is not a second service.
+

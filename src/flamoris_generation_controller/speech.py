@@ -8,9 +8,17 @@ SPEECH_TEMPLATE = "speech-no-reference"
 SPEECH_PROVIDER = "irodori"
 SPEECH_CAPABILITY = "speech.generate"
 IRODORI_SOURCE_REVISION = "89f9d8fbd4d51ea019867ee1197725ede1df13c5"
+IRODORI_SERVER_CONTRACT_REVISION = "61012c760f22f7b4a6c21c5c5f8f9e148120b6f9"
 
 
-def speech_profile():
+def speech_profile(http=False):
+    if http:
+        return {
+            "profile": "irodori-server-no-reference-v1",
+            "server_contract_revision": IRODORI_SERVER_CONTRACT_REVISION,
+            "reference_audio": False,
+            "candidates": 1,
+        }
     return {
         "profile": "irodori-no-reference-v1",
         "source_revision": IRODORI_SOURCE_REVISION,
@@ -46,7 +54,7 @@ class SpeechRecipe(BaseModel):
     parameters: SpeechParameters
 
 
-def speech_descriptor():
+def speech_descriptor(http=False):
     properties = SpeechParameters.model_json_schema()["properties"]
     parameters = {}
     for name, schema in properties.items():
@@ -74,7 +82,7 @@ def speech_descriptor():
         "parameters": parameters,
         "input_roles": [],
         "output_roles": [{"port": "audio", "role": "audio", "media_kind": "audio"}],
-        "qualification": "configured-local-resources",
-        "speech": speech_profile(),
+        "qualification": "configured-http-contract" if http else "configured-local-resources",
+        "speech": speech_profile(http),
         "readiness": {"status": "not-attested"},
     }
