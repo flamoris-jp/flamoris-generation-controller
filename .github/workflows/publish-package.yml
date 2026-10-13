@@ -47,5 +47,3 @@ jobs:
             exit 1
           fi
           gh release create v1.0.3 dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Generation Controller v1.0.3' --notes-file release/NOTES.md --latest
-
-

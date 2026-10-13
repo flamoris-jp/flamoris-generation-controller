@@ -97,4 +97,3 @@ class Settings(BaseModel):
 
     def roots(self, kind: ModelKind) -> list[Path]:
         return self.model_dirs.get(kind, [self.model_root / MODEL_FOLDERS[kind]])
-

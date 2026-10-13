@@ -254,4 +254,3 @@ class ComfyUIProvider:
         async with aclosing(self.client.stream_output(output)) as stream:
             async for chunk in stream:
                 yield chunk
-

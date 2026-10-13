@@ -70,4 +70,3 @@ Studio preserves its DB schema, user accounts, opaque mappings, request fences a
 ## Reference conditioning (source target 1.0.1)
 
 Schema 7 and existing definitions keep their identities. New conditioned recipes use schema 8 and are persisted by the existing WorkflowStore. The same JobStore and input-copy ledger protect every image, including after uncertain acceptance/restart. Deploy matched Generation/Studio packages; reconcile schema-8 work and copies before downgrade. No data conversion or file deletion is performed by installing this source.
-

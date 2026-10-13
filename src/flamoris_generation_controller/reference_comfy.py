@@ -281,4 +281,3 @@ def build_reference(definition_id, defaults, values):
     return ReferenceRecipe(
         definition_id=definition_id, parameters=parameters, conditioning=conditioning, images=images
     )
-

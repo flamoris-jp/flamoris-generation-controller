@@ -81,4 +81,3 @@ Code and documentation are [Apache-2.0](LICENSE) unless otherwise stated. Retain
 ## Updater packaging
 
 See [repository-owned library distribution](docs/UPDATER.md). Generation MCP publishes the runnable image and installation catalog; Controller is not a second service.
-

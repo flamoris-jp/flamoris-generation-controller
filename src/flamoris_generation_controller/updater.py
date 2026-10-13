@@ -36,4 +36,3 @@ def factory(config):
 
 def main():
     serve(factory)
-

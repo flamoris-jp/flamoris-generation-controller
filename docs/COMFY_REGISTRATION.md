@@ -70,4 +70,3 @@ execution. The matching Studio reference UI accepts these registered profiles th
 New built recipes use schema 7. Drain/reconcile them and their protected copies
 before rolling back to software that does not understand that schema. Preserve
 all old recipes, saved data and uncertain journals.
-

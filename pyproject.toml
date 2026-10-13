@@ -36,5 +36,3 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
-
-

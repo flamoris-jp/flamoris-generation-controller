@@ -184,4 +184,3 @@ def test_unicode_recipe_round_trip_and_no_raw_node_import(settings):
     path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     with pytest.raises(ValidationError):
         fresh.get(key)
-
