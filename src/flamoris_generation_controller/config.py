@@ -10,6 +10,8 @@ from pydantic import (
     ConfigDict,
     Field,
     HttpUrl,
+    field_validator,
+    model_validator,
 )
 
 ModelKind = Literal[
@@ -57,6 +59,10 @@ class Settings(BaseModel):
     transfer_disk_bytes: int = Field(default=8 * 1024**3, ge=1, le=64 * 1024**3)
     targeted_interrupt: bool = False
     irodori_config: Path | None = None
+    irodori_url: HttpUrl | None = None
+    irodori_model: str = Field(default="irodori-tts", min_length=1, max_length=128)
+    irodori_token: str | None = Field(default=None, min_length=1, max_length=512, repr=False)
+    irodori_timeout: float = Field(default=300, ge=5, le=300, allow_inf_nan=False)
     yue2_config: Path | None = None
     yue2_output_root: Path | None = None
     sheetsage2_config: Path | None = None
@@ -77,10 +83,47 @@ class Settings(BaseModel):
         "TRANSFER_DISK_BYTES": "transfer_disk_bytes",
         "TARGETED_INTERRUPT": "targeted_interrupt",
         "IRODORI_CONFIG": "irodori_config",
+        "IRODORI_URL": "irodori_url",
+        "IRODORI_MODEL": "irodori_model",
+        "IRODORI_TOKEN": "irodori_token",
+        "IRODORI_TIMEOUT": "irodori_timeout",
         "YUE2_CONFIG": "yue2_config",
         "YUE2_OUTPUT_ROOT": "yue2_output_root",
         "SHEETSAGE2_CONFIG": "sheetsage2_config",
     }
+
+    @field_validator("irodori_url")
+    @classmethod
+    def irodori_origin(cls, value):
+        if value is not None and (
+            value.username is not None
+            or value.password is not None
+            or value.query is not None
+            or value.fragment is not None
+            or value.path not in (None, "/")
+        ):
+            raise ValueError("Irodori URL must be an operator-configured HTTP origin")
+        return value
+
+    @field_validator("irodori_url", "irodori_token", mode="before")
+    @classmethod
+    def optional_irodori_value(cls, value):
+        return None if value == "" else value
+
+    @field_validator("irodori_model", "irodori_token")
+    @classmethod
+    def irodori_printable(cls, value):
+        if value is not None and (
+            not value.isascii() or not value.isprintable() or value != value.strip()
+        ):
+            raise ValueError("Invalid Irodori configuration")
+        return value
+
+    @model_validator(mode="after")
+    def irodori_transport(self):
+        if self.irodori_config is not None and self.irodori_url is not None:
+            raise ValueError("Select exactly one Irodori transport")
+        return self
 
     @classmethod
     def from_env(cls, **overrides) -> "Settings":

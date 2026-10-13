@@ -322,6 +322,7 @@ class WorkflowStore:
         directory: Path,
         *,
         speech_enabled=False,
+        speech_http=False,
         music_enabled=False,
         transcription_enabled=False,
     ):
@@ -329,6 +330,7 @@ class WorkflowStore:
         self.directory = directory
         self._recipes: dict[str, AnyRecipe] = {}
         self.speech_enabled = speech_enabled
+        self.speech_http = speech_http
         self.music_enabled = music_enabled
         self.transcription_enabled = transcription_enabled
         from .registered_comfy import ComfyDefinitions
@@ -388,7 +390,11 @@ class WorkflowStore:
             "workflow_id": workflow_id,
             **recipe.model_dump(mode="json"),
             "prompt": prompt,
-            **({"speech": speech_profile()} if isinstance(recipe, SpeechRecipe) else {}),
+            **(
+                {"speech": speech_profile(self.speech_http)}
+                if isinstance(recipe, SpeechRecipe)
+                else {}
+            ),
             **({"music": music_profile()} if isinstance(recipe, MusicRecipe) else {}),
             **(
                 {"transcription": transcription_profile()}
@@ -490,7 +496,7 @@ class WorkflowStore:
     def list(self) -> dict:
         descriptors = builtin_descriptors()
         if self.speech_enabled:
-            descriptors.append(speech_descriptor())
+            descriptors.append(speech_descriptor(self.speech_http))
         if self.music_enabled:
             descriptors.append(music_descriptor())
         if self.transcription_enabled:

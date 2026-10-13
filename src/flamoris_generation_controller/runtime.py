@@ -20,6 +20,7 @@ from .music import MUSIC_CAPABILITY, MUSIC_PROVIDER, MUSIC_TEMPLATE
 from .providers import ProviderRegistry
 from .providers.comfyui import ComfyUIProvider
 from .providers.irodori import IrodoriConfig, IrodoriProvider
+from .providers.irodori_http import IrodoriHTTPProvider
 from .providers.sheetsage2 import SheetSage2Config, SheetSage2Provider
 from .providers.yue2 import Yue2Config, Yue2Provider
 from .retention import RetentionStore
@@ -49,7 +50,9 @@ class GenerationController:
             workflows = WorkflowStore(
                 catalog,
                 settings.workflow_dir,
-                speech_enabled=settings.irodori_config is not None,
+                speech_enabled=settings.irodori_config is not None
+                or settings.irodori_url is not None,
+                speech_http=settings.irodori_url is not None,
                 music_enabled=settings.yue2_config is not None,
                 transcription_enabled=settings.sheetsage2_config is not None,
             )
@@ -73,9 +76,15 @@ class GenerationController:
                     ),
                 )
             )
-            if settings.irodori_config is not None:
+            if settings.irodori_config is not None or settings.irodori_url is not None:
                 providers.register(
-                    IrodoriProvider(
+                    IrodoriHTTPProvider(
+                        settings,
+                        settings.output_dir / "irodori-http-staging",
+                        transport=transport,
+                    )
+                    if settings.irodori_url is not None
+                    else IrodoriProvider(
                         IrodoriConfig.read(settings.irodori_config),
                         settings.output_dir / "irodori-staging",
                     )
@@ -84,7 +93,9 @@ class GenerationController:
                     Capability(
                         capability_id=SPEECH_CAPABILITY,
                         provider_id=SPEECH_PROVIDER,
-                        runtime_id="irodori-no-reference-v1",
+                        runtime_id="irodori-server-no-reference-v1"
+                        if settings.irodori_url is not None
+                        else "irodori-no-reference-v1",
                         workflow_templates=(SPEECH_TEMPLATE,),
                     )
                 )

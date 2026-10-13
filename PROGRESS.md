@@ -61,3 +61,8 @@ Controller #16 adds internal-only `jobs.external.list` and a bounded durable rec
 ## 2026-10-13 — linked discovery accepted
 
 Controller #17 is merged and v1.0.2 published. Final validation passed 313 tests, Python 3.11/3.12 CI, lint/format and installed core without MCP/HTTP dependencies. Matched Generation #84 and Studio #87 are merged; Generation 1.0.5 embeds this library and Studio 1.0.6 implements the bounded linked gallery and Music grouping. Operator app updates succeeded. Individual Hub credentials, matching signed provenance, exact Studio bindings and real browser/two-client publication still require operational acceptance; no anonymous history is assigned automatically.
+
+
+## 2026-10-14 resident Irodori integration
+
+Controller #19 adds an explicitly configured resident HTTP transport, strict model-loaded discovery, single bounded no-reference POST and WAV output through the existing reservation/asset authority. The reviewed server API has no targeted cancel or durable request lookup; cancellation remains pending and lost/restart outcomes stay reserved. Controller 1.0.4 is prepared with matched Studio/Generation integration. Source tests pass; merge, publication, private configuration and real recording acceptance remain pending.
