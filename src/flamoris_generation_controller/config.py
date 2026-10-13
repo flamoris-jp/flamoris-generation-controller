@@ -58,6 +58,7 @@ class Settings(BaseModel):
     targeted_interrupt: bool = False
     irodori_config: Path | None = None
     yue2_config: Path | None = None
+    yue2_output_root: Path | None = None
     sheetsage2_config: Path | None = None
 
     env_fields: ClassVar[dict[str, str]] = {
@@ -77,6 +78,7 @@ class Settings(BaseModel):
         "TARGETED_INTERRUPT": "targeted_interrupt",
         "IRODORI_CONFIG": "irodori_config",
         "YUE2_CONFIG": "yue2_config",
+        "YUE2_OUTPUT_ROOT": "yue2_output_root",
         "SHEETSAGE2_CONFIG": "sheetsage2_config",
     }
 
@@ -95,3 +97,4 @@ class Settings(BaseModel):
 
     def roots(self, kind: ModelKind) -> list[Path]:
         return self.model_dirs.get(kind, [self.model_root / MODEL_FOLDERS[kind]])
+

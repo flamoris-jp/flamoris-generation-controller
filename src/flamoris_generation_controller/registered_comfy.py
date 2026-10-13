@@ -301,3 +301,4 @@ class ComfyDefinitions:
         if job_id is not None:
             prompt["7"]["inputs"]["filename_prefix"] = "flamoris/" + job_id
         return prompt
+

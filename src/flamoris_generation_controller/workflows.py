@@ -511,3 +511,4 @@ class WorkflowStore:
         if len(json.dumps(result, indent=2).encode("utf-8")) > MAX_DISCOVERY_BYTES:
             raise ValueError("Recipe discovery exceeds byte limit")
         return result
+

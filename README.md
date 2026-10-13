@@ -45,6 +45,11 @@ The two builtin Image recipes and configured native Irodori Speech, YuE2 Music a
 
 Reservations are journaled before submission. Unknown acceptance or journal commit remains reserved across disconnect/restart and is never retried or released implicitly. Scoped cancellation, immutable input leases, output roles, archive retrieval, transfer and retention keep their existing protections. Retired active debt stays opaque and reserved. [Migration and rollback](docs/MIGRATION.md) describes unchanged storage and the new ownership lock.
 
+Optional `FLAMORIS_YUE2_OUTPUT_ROOT` publishes completed Music bundles to an existing
+operator directory while retaining private job/workflow storage. See
+[generated media and private job storage](docs/STORAGE.md) for configuration,
+permissions, failure behavior and deletion boundaries.
+
 ## Development and evidence
 
 ```sh
@@ -76,3 +81,4 @@ Code and documentation are [Apache-2.0](LICENSE) unless otherwise stated. Retain
 ## Updater packaging
 
 See [repository-owned library distribution](docs/UPDATER.md). Generation MCP publishes the runnable image and installation catalog; Controller is not a second service.
+

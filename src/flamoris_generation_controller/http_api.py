@@ -8,9 +8,9 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from .contracts import (
+    INTERNAL_OPERATIONS,
     MAX_REQUEST_BYTES,
     MAX_RESPONSE_BYTES,
-    OPERATIONS,
     AssetContent,
     CallerContext,
     ControllerError,
@@ -61,7 +61,7 @@ class HTTPAPI:
         if len(auth) != 1 or not hmac.compare_digest(auth[0], self._credential):
             return self.error("unauthorized", 401)
         operation = request.path_params.get("operation")
-        if operation not in OPERATIONS:
+        if operation not in INTERNAL_OPERATIONS:
             return self.error("unknown_operation", 404)
         if request.headers.get("content-encoding", "identity") != "identity":
             return self.error("validation", 415)

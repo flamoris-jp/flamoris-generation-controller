@@ -1,3 +1,3 @@
-# Controller v1.0.1 — release preparation
+# FLAMORIS Controller v1.0.3
 
-Adds bounded IPAdapter appearance/style and prepared-map ControlNet ComfyWorkFlow profiles, four managed reference roles, schema-8 recipes and a local graph-writing CLI. Retains schema-7 img2img and existing Job/Input/Asset authority. Includes concrete graphs and model/setup guidance. Publication, host compatibility and actual generation are separate from this source change.
+Adds registered img2img, IPAdapter character/style and prepared ControlNet reference-image profiles. Preserves linked external result discovery, YuE2 output placement, account isolation and explicit Assistant model selection. Actual model/GPU acceptance remains separate.

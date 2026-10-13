@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flamoris-generation-controller"
-version = "1.0.1"
+version = "1.0.3"
 description = "Shared bounded generation domain and internal HTTP adapter"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -36,3 +36,5 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
+
+

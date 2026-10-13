@@ -33,7 +33,7 @@ POST `/api/v1/generation/{operation}` with `Content-Type: application/json` and 
 | `inputs.upload.write` | `upload_id`, `offset`, `data_base64`, `chunk_sha256` | Ordered digest-checked acknowledgement |
 | `inputs.upload.finish` | `upload_id` | Immutable uploaded-image metadata |
 
-The current allowlist contains 25 operations: 23 retained operations plus
+The external-compatible allowlist contains 25 operations: 23 retained operations plus
 `comfy.register/get`. Registered checkpoint txt2img/img2img builds use schema 7
 and the definition digest; see [COMFY_REGISTRATION.md](COMFY_REGISTRATION.md).
 Old schema 2/3 and their registration/verification/v3 tools remain retired.
@@ -65,3 +65,13 @@ No retry/fallback follows a submit timeout, lost acknowledgement, uncertain jour
 ## Production reference profiles
 
 Registered checkpoint txt2img/img2img remain schema 7. The reviewed IPAdapter appearance/style and prepared-map ControlNet profile uses schema 8, with definition_id, Parameters, Conditioning and images keyed by declared roles. Public build parameters stay flat; only declared model widgets, bounded strengths/intervals and managed input IDs are accepted. Both HTTP and MCP use the same build/admission/staging path. See [REFERENCE_IMAGES.md](REFERENCE_IMAGES.md) for examples and exact slots.
+
+
+## Completed external job discovery (internal service only)
+
+`jobs.external.list` extends the authenticated internal surface to 26 operations; it is absent from the 25-tool external MCP catalog and forbidden to external caller contexts, even with a constructed permission set. Strict arguments are `actor: {issuer, subject}`, optional `after` (integer 0..2^53−1) and `limit` (1..16, default 8). The trusted Studio backend obtains this actor from its operator-provisioned user binding, never a browser-supplied identity.
+
+The result is `{jobs: [{job_id, sequence}], next_cursor, has_more}` in ascending sequence order for the exact actor. A final page advances to the current high-water mark. Cursors above that mark are invalid. Only the matched active external job may be observed to capture completion; anonymous, foreign and retired reservations are untouched. Discovery performs no submission, GPU activation or media download. Studio must still verify completed status, manifest provenance, its current session/binding and durable ownership claims before publication.
+
+A private `job-authority/external-index.json` retains at most 1,024 recent completed external identities. Repeated status reads do not duplicate entries; restart preserves the index. Eviction affects discovery only, never archive/media deletion. Jobs predating the index or outside its window can still be imported explicitly by exact ID. Missing/deleted manifests are not ownership grants; corrupt indexes fail discovery closed. Receipt write failure does not fail successful generation; exact-job retrieval remains available.
+

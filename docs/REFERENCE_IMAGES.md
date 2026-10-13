@@ -81,3 +81,4 @@ Ordinary tests use synthetic images and fake ComfyUI HTTP. Actual installed-mode
 4. Studioでは登録したComfyWorkFlowを選び、「元画像」「キャラクター」「画風」「ポーズ・構図」の必要な画像を設定します。設定再利用は全画像と強度を戻します。
 
 参照画像は既存の24時間期限を維持します。原本を残し、期限切れの参照は再アップロードしてください。ControlNet欄はモデルに対応する作成済みの骨格・深度・輪郭画像です。写真からの自動抽出、複数人物の領域分離、完全なキャラクター同一性はこの実装では保証しません。
+

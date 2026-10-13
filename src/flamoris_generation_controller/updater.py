@@ -31,8 +31,9 @@ def inspect_domain(config, resources):
 
 
 def factory(config):
-    return ApplicationOwner(config, "flamoris-generation-controller", "1.0.1", inspect_domain)
+    return ApplicationOwner(config, "flamoris-generation-controller", "1.0.3", inspect_domain)
 
 
 def main():
     serve(factory)
+

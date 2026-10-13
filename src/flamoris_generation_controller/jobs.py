@@ -379,6 +379,87 @@ class JobStore:
             raise ValueError("Asset metadata exceeds archive limit")
         with AssetFiles(self.output_dir, job.job_id) as files:
             files.write("metadata.json", payload)
+        if job.external_provenance is not None:
+            try:
+                self._index_external(job)
+            except (ValueError, OSError, TypeError, KeyError):
+                # Discovery receipts cannot turn a completed generation into a
+                # failure. A corrupt receipt fails discovery closed; exact-job
+                # status/import remains usable without repairing user data.
+                logging.getLogger(__name__).warning("External discovery capture unavailable")
+
+    def _external_index(self) -> dict:
+        record = self._authority.read("external-index.json")
+        if record is None:
+            return {"version": 1, "sequence": 0, "jobs": []}
+        if (
+            set(record) != {"version", "sequence", "jobs"}
+            or type(record["version"]) is not int
+            or record["version"] != 1
+            or type(record["sequence"]) is not int
+            or not 0 <= record["sequence"] <= 2**53 - 1
+            or type(record["jobs"]) is not list
+            or len(record["jobs"]) > 1024
+        ):
+            raise ValueError("Invalid external discovery index")
+        previous, seen = 0, set()
+        for row in record["jobs"]:
+            if (
+                type(row) is not dict
+                or set(row) != {"job_id", "sequence", "actor"}
+                or type(row["sequence"]) is not int
+                or not previous < row["sequence"] <= record["sequence"]
+            ):
+                raise ValueError("Invalid external discovery index")
+            identifier = checked_id(row["job_id"])
+            ExternalProvenance.model_validate(row["actor"])
+            if identifier in seen:
+                raise ValueError("Invalid external discovery index")
+            seen.add(identifier)
+            previous = row["sequence"]
+        return record
+
+    def _index_external(self, job: Job) -> None:
+        record = self._external_index()
+        actor = job.external_provenance.model_dump()
+        for row in record["jobs"]:
+            if row["job_id"] == job.job_id:
+                if row["actor"] != actor:
+                    raise ValueError("External discovery identity changed")
+                return
+        if record["sequence"] == 2**53 - 1:
+            raise ValueError("External discovery sequence exhausted")
+        sequence = record["sequence"] + 1
+        jobs = [*record["jobs"], {"job_id": job.job_id, "sequence": sequence, "actor": actor}]
+        self._authority.write(
+            "external-index.json",
+            {
+                "version": 1,
+                "sequence": sequence,
+                "jobs": jobs[-1024:],
+            },
+        )
+
+    async def list_external(self, actor: dict, after: int = 0, limit: int = 8) -> dict:
+        """Recent completed identities only; Studio independently authorizes import."""
+        identity = ExternalProvenance.model_validate(actor)
+        active = self._jobs.get(self._active_job_id)
+        if active is not None and active.external_provenance == identity:
+            async with active.lock:
+                await self._refresh(active.job_id, active)
+        record = self._external_index()
+        if type(after) is not int or not 0 <= after <= record["sequence"]:
+            raise ValueError("Invalid external discovery cursor")
+        if type(limit) is not int or not 1 <= limit <= 16:
+            raise ValueError("Invalid external discovery limit")
+        rows = [row for row in record["jobs"] if row["sequence"] > after and row["actor"] == actor]
+        more = len(rows) > limit
+        selected = rows[:limit]
+        return {
+            "jobs": [{"job_id": row["job_id"], "sequence": row["sequence"]} for row in selected],
+            "next_cursor": selected[-1]["sequence"] if more else record["sequence"],
+            "has_more": more,
+        }
 
     async def status(self, job_id: str) -> dict:
         checked_id(job_id)

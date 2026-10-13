@@ -301,3 +301,4 @@ def test_installed_cli_writes_supported_graph_without_provider_calls(flags):
     validate_graph(graph)
     if "--initial-image" in flags:
         assert graph["5"]["inputs"]["denoise"] == 0.65
+
