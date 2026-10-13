@@ -66,3 +66,7 @@ Normal contract tests use fake providers. Deployment, configuration/data changes
 Do not start an old pre-lock binary alongside this version: the new lock cannot constrain software that does not acquire it. Drain/reconcile, back up and stop the previous owner first. Unknown reservations survive shutdown; acquiring the new lock is not permission to release them. Network/distributed filesystem locking is outside this contract.
 
 Studio preserves its DB schema, user accounts, opaque mappings, request fences and history. No database migration is added. Its operator configuration must explicitly change from `/mcp` or Hub to `/api/v1/generation`, supply the separate service credential and empty the generation namespace. The new client rejects legacy endpoints rather than silently falling back. Roll back both matched clients/host if necessary, after checking the single-owner and durable-state conditions.
+
+## Reference conditioning (source target 1.0.1)
+
+Schema 7 and existing definitions keep their identities. New conditioned recipes use schema 8 and are persisted by the existing WorkflowStore. The same JobStore and input-copy ledger protect every image, including after uncertain acceptance/restart. Deploy matched Generation/Studio packages; reconcile schema-8 work and copies before downgrade. No data conversion or file deletion is performed by installing this source.

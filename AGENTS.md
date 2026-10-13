@@ -4,6 +4,9 @@ This repository is the owner of FLAMORIS generation-domain code. It contains the
 
 ## Current task and sequencing
 
+The 2026-10-12 user request explicitly resumes source development for img2img, IPAdapter appearance/style, prepared-map ControlNet and matching Studio integration under #13 / Studio #79. It supersedes older reference-expansion holds for this slice. Use docs/REFERENCE_IMAGES.md; source, tests, documentation and reviewable PRs are authorized. Live deployment, model downloads/inference and merges remain separately authorized.
+
+
 Controller extraction and the subsequent bounded ComfyWorkFlow registration/reference-image profile are accepted in main through Controller #5/#7 and matched callers, after explicit merge instructions. See AI PROGRESS §4.8/§4.9. The current request aligns documentation and postpones live acceptance. Live cutover, data/grants/credentials, paid calls and further generation features remain separate scopes. Future merges require applicable explicit user authorization.
 
 The selected initial host is one Controller object inside the Generation MCP HTTP process, shared by external MCP and authenticated internal HTTP adapters. The output-root lifetime ownership lock must be acquired before provider construction or recovery. Keep the exact API/service-permission decisions in docs/API.md and Controller #1; never create another runtime per caller/session.
@@ -51,3 +54,8 @@ Use focused commits and review final text/code. Merges require explicit user aut
 ## 2026-10-13 linked external gallery scope
 
 Controller #16 / Studio #86 implement internal-only bounded external discovery and the linked per-account gallery. The user explicitly requests implementation through release and live changes. Preserve the 25 external tools, trusted provenance, existing single-owner/unknown fences and output placement. The new index is only a recent receipt, never a competing state owner or Studio ACL. Matched source review/tests and live credential/binding acceptance must be recorded separately.
+
+
+## 2026-10-13 reference-image continuation
+
+Resume the prepared reference-image PR against current main. Preserve linked external discovery, YuE2 output placement and remembered Assistant models. Match Controller/Generation/Studio dependency pins and new release versions; source CI and real-host model/shared-input acceptance remain distinct.

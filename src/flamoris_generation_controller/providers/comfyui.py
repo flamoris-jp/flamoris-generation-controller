@@ -6,6 +6,7 @@ from pathlib import Path
 from ..comfyui import ComfyUIClient
 from ..image_decode import decode_image
 from ..models import ModelCatalog
+from ..reference_comfy import IMAGE_NODES, ReferenceRecipe
 from ..workflows import Recipe, RegisteredRecipe, WorkflowStore, build_prompt
 from .base import (
     GenerationRequest,
@@ -80,7 +81,7 @@ class ComfyUIProvider:
 
     async def submit(self, request: GenerationRequest, job_id: str) -> ProviderJob:
         if request.operation != "image.generate" or not isinstance(
-            request.payload, (Recipe, RegisteredRecipe)
+            request.payload, (Recipe, RegisteredRecipe, ReferenceRecipe)
         ):
             raise SubmissionRejected("ComfyUI supports only retained builtin image recipes")
         try:
@@ -91,7 +92,9 @@ class ComfyUIProvider:
                 prompt["7"]["inputs"]["filename_prefix"] = f"flamoris/{job_id}"
         except ValueError as exc:
             raise SubmissionRejected(str(exc)[:300]) from exc
-        if isinstance(request.payload, RegisteredRecipe) and request.payload.reference_image:
+        if isinstance(request.payload, ReferenceRecipe) or (
+            isinstance(request.payload, RegisteredRecipe) and request.payload.reference_image
+        ):
             return await self._submit_reference(request.payload, prompt, job_id)
         execution_id = await self.client.submit(prompt, job_id)
         self._output_nodes[execution_id] = "7"
@@ -106,27 +109,36 @@ class ComfyUIProvider:
             raise SubmissionRejected("Managed reference image storage is not available")
         posted = False
         try:
+            images = (
+                recipe.images
+                if isinstance(recipe, ReferenceRecipe)
+                else {"reference_image": recipe.reference_image}
+            )
             async with self.managed_inputs.stage(
                 job_id,
-                {"reference_image": recipe.reference_image},
-                {"reference_image": {"image/png", "image/jpeg", "image/webp"}},
+                images,
+                {key: {"image/png", "image/jpeg", "image/webp"} for key in images},
             ) as readers:
-                reader = readers["reference_image"]
-                data = bytearray()
-                async for part in reader.chunks():
-                    data.extend(part)
-                    if len(data) > 8 * 1024**2:
-                        raise ValueError("Reference image exceeds byte limit")
-                payload = bytes(data)
-                decode_image(payload, reader.metadata["mime_type"])
-                name = self.input_copies.stage(job_id, payload, reader.metadata["mime_type"])
-                prompt["8"]["inputs"]["image"] = name
+                metadata = {}
+                for role, reader in readers.items():
+                    data = bytearray()
+                    async for part in reader.chunks():
+                        data.extend(part)
+                        if len(data) > 8 * 1024**2:
+                            raise ValueError("Reference image exceeds byte limit")
+                    payload = bytes(data)
+                    decode_image(payload, reader.metadata["mime_type"])
+                    name = self.input_copies.stage(job_id, payload, reader.metadata["mime_type"])
+                    node = IMAGE_NODES[role] if isinstance(recipe, ReferenceRecipe) else "8"
+                    prompt[node]["inputs"]["image"] = name
+                    metadata[role] = dict(reader.metadata)
                 self.input_copies.before_post(job_id)
                 posted = True
                 execution_id = await self.client.submit(prompt, job_id)
                 self._output_nodes[execution_id] = "7"
                 self.input_copies.bind(job_id, execution_id)
-                return ProviderJob(execution_id, {"reference_image": dict(reader.metadata)})
+                return ProviderJob(execution_id, metadata)
+
         except BaseException as exc:
             if not posted or isinstance(exc, SubmissionRejected):
                 try:

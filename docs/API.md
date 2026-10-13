@@ -62,6 +62,10 @@ Errors are constant JSON `{"error":{"code":"..."}}`, without prompts, tokens, pa
 
 No retry/fallback follows a submit timeout, lost acknowledgement, uncertain journal commit or transport replacement. The core keeps its reservation; Studio keeps its durable owned request fence. A failed response does not prove generation stopped. Cancellation must confirm a terminal provider outcome before reservation release. Keep original retired active journals for reconciliation by their previous matched authority.
 
+## Production reference profiles
+
+Registered checkpoint txt2img/img2img remain schema 7. The reviewed IPAdapter appearance/style and prepared-map ControlNet profile uses schema 8, with definition_id, Parameters, Conditioning and images keyed by declared roles. Public build parameters stay flat; only declared model widgets, bounded strengths/intervals and managed input IDs are accepted. Both HTTP and MCP use the same build/admission/staging path. See [REFERENCE_IMAGES.md](REFERENCE_IMAGES.md) for examples and exact slots.
+
 
 ## Completed external job discovery (internal service only)
 

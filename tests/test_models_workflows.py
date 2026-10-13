@@ -17,7 +17,7 @@ def test_scan_all_kinds_and_details(settings):
     catalog = ModelCatalog(settings)
     models = catalog.list()
     assert {m["kind"] for m in models} == set(MODEL_FOLDERS)
-    assert len(models) == 12
+    assert len(models) == len(MODEL_FOLDERS) + 3
     assert len(catalog.list("lora")) == 3
     assert catalog.get("lora:nested/detail.safetensors")["format"] == "safetensors"
     assert catalog.get("vae:extra.GGUF")["size_bytes"] == 3

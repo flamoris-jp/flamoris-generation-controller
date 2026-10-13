@@ -1,3 +1,9 @@
+# Production reference images — 2026-10-12
+
+Controller #13 implements IPAdapter appearance/style and prepared-map ControlNet profiles, multi-image staging and schema 8; retains schema-7 img2img. Includes concrete ComfyWorkFlow examples and a local graph-writing helper. Source target 1.0.1, not a published release. Current local checks: 319 domain/API/CLI tests, Ruff and wheel/sdist build pass; CI receipts live with the PR. Studio #79 is the matching UI/owner integration. No deployment, model download or live inference occurred.
+
+---
+
 # Repository-owned library release preparation — 2026-10-11
 
 The operator requested preparing each repository for Updater installation. Controller publishes its own library wheel/source; Generation MCP embeds its fixed dependency and publishes the runnable image/catalog. No second daemon or authority is introduced. Library publication/CI and real-host acceptance are separate; no host/data/provider actions are performed.

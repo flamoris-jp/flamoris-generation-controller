@@ -8,8 +8,7 @@ The initial profiles accept checkpoint-based ComfyUI core txt2img and init-image
 img2img API-format graphs. Numeric node IDs may vary. The exact reviewed graph
 topology, one sampler, one output, batch size one and bounded parameter widgets
 are enforced. Custom nodes, arbitrary input files/URLs, output paths, extra nodes
-and undeclared widgets are rejected. IPAdapter/ControlNet and other model families
-need their own reviewed profiles; img2img does not claim their semantics.
+and undeclared widgets are rejected. The subsequent [reference-conditioning profile](REFERENCE_IMAGES.md) supports reviewed IPAdapter appearance/style and prepared-map ControlNet nodes. Init-image img2img remains a distinct operation.
 
 External tools are `comfy.register(name, graph)` and `comfy.get(definition_id)`.
 The same operations are exposed by authenticated Controller HTTP. Existing
@@ -66,8 +65,7 @@ Source tests use synthetic images and fake ComfyUI HTTP. Actual model/GPU succes
 remains unverified until separately requested deployment acceptance. Install the
 matched Controller/Generation facade and refresh the Hub's 25-tool catalog.
 Configure the existing shared `COMFYUI_INPUT_ROOT` explicitly for reference
-execution. Studio's existing builtin Image UI remains on its retained contract;
-the new external ChatGPT path does not add a Studio Image editor feature.
+execution. The matching Studio reference UI accepts these registered profiles through Controller HTTP; see [setup and creative limits](REFERENCE_IMAGES.md).
 
 New built recipes use schema 7. Drain/reconcile them and their protected copies
 before rolling back to software that does not understand that schema. Preserve

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flamoris-generation-controller"
-version = "1.0.2"
+version = "1.0.3"
 description = "Shared bounded generation domain and internal HTTP adapter"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -16,6 +16,7 @@ http = ["starlette>=0.40,<2"]
 dev = ["pytest>=8,<10", "pytest-asyncio>=1,<2", "ruff>=0.14,<1", "build>=1.2,<2"]
 
 [project.scripts]
+flamoris-create-reference-comfy = "flamoris_generation_controller.reference_cli:main"
 flamoris-generation-controller-update-owner = "flamoris_generation_controller.updater:main"
 flamoris-generation-retention = "flamoris_generation_controller.retention:main"
 
@@ -35,4 +36,3 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
-
