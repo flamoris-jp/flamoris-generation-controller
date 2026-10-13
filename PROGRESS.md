@@ -51,3 +51,7 @@ new revision remain pending. No live service or data was changed.
 ## 2026-10-13 — linked external gallery (source preparation)
 
 Controller #16 adds internal-only `jobs.external.list` and a bounded durable recent index. Exact actor isolation, strict permissions/arguments, metadata-only completion observation, restart, pagination and corrupt-index rejection are covered by deterministic tests. Source preparation is not yet merged or deployed; the matched Generation pin and Studio #86 integration are required.
+
+## 2026-10-13 — linked discovery accepted
+
+Controller #17 is merged and v1.0.2 published. Final validation passed 313 tests, Python 3.11/3.12 CI, lint/format and installed core without MCP/HTTP dependencies. Matched Generation #84 and Studio #87 are merged; Generation 1.0.5 embeds this library and Studio 1.0.6 implements the bounded linked gallery and Music grouping. Operator app updates succeeded. Individual Hub credentials, matching signed provenance, exact Studio bindings and real browser/two-client publication still require operational acceptance; no anonymous history is assigned automatically.
