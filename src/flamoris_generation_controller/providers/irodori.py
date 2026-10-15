@@ -305,7 +305,7 @@ class IrodoriProvider:
 
     async def submit(self, request: GenerationRequest, job_id):
         if (
-            not isinstance(request.payload, SpeechRecipe)
+            type(request.payload) is not SpeechRecipe
             or request.operation != SPEECH_CAPABILITY
             or request.payload.template != SPEECH_TEMPLATE
             or not re.fullmatch(r"[0-9a-f]{32}", job_id)

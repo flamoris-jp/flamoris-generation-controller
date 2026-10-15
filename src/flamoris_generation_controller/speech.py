@@ -11,7 +11,18 @@ IRODORI_SOURCE_REVISION = "89f9d8fbd4d51ea019867ee1197725ede1df13c5"
 IRODORI_SERVER_CONTRACT_REVISION = "61012c760f22f7b4a6c21c5c5f8f9e148120b6f9"
 
 
-def speech_profile(http=False):
+SPEECH_REFERENCE_TEMPLATE = "speech-reference"
+
+
+def speech_profile(http=False, reference=False):
+    if reference:
+        if not http:
+            raise ValueError("Reference speech requires the resident HTTP adapter")
+        return {
+            **speech_profile(True),
+            "profile": "irodori-server-reference-v1",
+            "reference_audio": True,
+        }
     if http:
         return {
             "profile": "irodori-server-no-reference-v1",
@@ -52,6 +63,39 @@ class SpeechRecipe(BaseModel):
     schema_version: Literal[4] = 4
     template: Literal["speech-no-reference"] = SPEECH_TEMPLATE
     parameters: SpeechParameters
+
+
+class ReferenceSpeechParameters(SpeechParameters):
+    reference_audio: str = Field(strict=True, pattern=r"^[0-9a-f]{32}$")
+
+
+class ReferenceSpeechRecipe(SpeechRecipe):
+    schema_version: Literal[9] = 9
+    template: Literal["speech-reference"] = SPEECH_REFERENCE_TEMPLATE
+    parameters: ReferenceSpeechParameters
+
+
+def reference_speech_descriptor():
+    descriptor = speech_descriptor(True)
+    descriptor.update(
+        id=SPEECH_REFERENCE_TEMPLATE,
+        schema_version=9,
+        name="Irodori speech with reference audio",
+        description="Speech conditioned on one managed reference WAV",
+        speech=speech_profile(True, True),
+    )
+    descriptor["parameters"]["reference_audio"] = {
+        "type": "managed_input",
+        "role": "reference_audio",
+        "required": True,
+        "media_types": ["audio/wav"],
+        "max_bytes": 8 * 1024**2,
+        "max_seconds": 30,
+    }
+    descriptor["input_roles"] = [
+        {"parameter": "reference_audio", "role": "reference_audio", "media_kind": "audio"}
+    ]
+    return descriptor
 
 
 def speech_descriptor(http=False):

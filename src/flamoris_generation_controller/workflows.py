@@ -23,6 +23,9 @@ from .speech import (
     SPEECH_CAPABILITY,
     SPEECH_PROVIDER,
     SPEECH_TEMPLATE,
+    SPEECH_REFERENCE_TEMPLATE,
+    ReferenceSpeechRecipe,
+    reference_speech_descriptor,
     SpeechRecipe,
     speech_descriptor,
     speech_profile,
@@ -141,7 +144,13 @@ class ReferenceRecipe(BaseModel):
 
 
 AnyRecipe = (
-    Recipe | RegisteredRecipe | ReferenceRecipe | SpeechRecipe | MusicRecipe | TranscriptionRecipe
+    Recipe
+    | RegisteredRecipe
+    | ReferenceRecipe
+    | ReferenceSpeechRecipe
+    | SpeechRecipe
+    | MusicRecipe
+    | TranscriptionRecipe
 )
 NATIVE_RECIPES = (SpeechRecipe, MusicRecipe, TranscriptionRecipe)
 
@@ -363,6 +372,9 @@ class WorkflowStore:
             )
         native = {
             SPEECH_TEMPLATE: (self.speech_enabled, SpeechRecipe),
+            SPEECH_REFERENCE_TEMPLATE: (
+                self.speech_enabled and self.speech_http, ReferenceSpeechRecipe
+            ),
             MUSIC_TEMPLATE: (self.music_enabled, MusicRecipe),
             TRANSCRIPTION_TEMPLATE: (self.transcription_enabled, TranscriptionRecipe),
         }
@@ -391,7 +403,7 @@ class WorkflowStore:
             **recipe.model_dump(mode="json"),
             "prompt": prompt,
             **(
-                {"speech": speech_profile(self.speech_http)}
+                {"speech": speech_profile(self.speech_http, isinstance(recipe, ReferenceSpeechRecipe))}
                 if isinstance(recipe, SpeechRecipe)
                 else {}
             ),
@@ -432,6 +444,7 @@ class WorkflowStore:
             return ReferenceRecipe.model_validate(data)
         native = {
             4: (self.speech_enabled, SpeechRecipe),
+            9: (self.speech_enabled and self.speech_http, ReferenceSpeechRecipe),
             5: (self.music_enabled, MusicRecipe),
             6: (self.transcription_enabled, TranscriptionRecipe),
         }
@@ -447,6 +460,7 @@ class WorkflowStore:
         if isinstance(recipe, NATIVE_RECIPES):
             enabled = {
                 SpeechRecipe: self.speech_enabled,
+                ReferenceSpeechRecipe: self.speech_enabled and self.speech_http,
                 MusicRecipe: self.music_enabled,
                 TranscriptionRecipe: self.transcription_enabled,
             }[type(recipe)]
@@ -479,6 +493,7 @@ class WorkflowStore:
         if isinstance(recipe, NATIVE_RECIPES):
             return {
                 SpeechRecipe: (SPEECH_PROVIDER, SPEECH_CAPABILITY),
+                ReferenceSpeechRecipe: (SPEECH_PROVIDER, SPEECH_CAPABILITY),
                 MusicRecipe: (MUSIC_PROVIDER, MUSIC_CAPABILITY),
                 TranscriptionRecipe: (TRANSCRIPTION_PROVIDER, TRANSCRIPTION_CAPABILITY),
             }[type(recipe)]
@@ -496,6 +511,8 @@ class WorkflowStore:
     def list(self) -> dict:
         descriptors = builtin_descriptors()
         if self.speech_enabled:
+            if self.speech_http:
+                descriptors.append(reference_speech_descriptor())
             descriptors.append(speech_descriptor(self.speech_http))
         if self.music_enabled:
             descriptors.append(music_descriptor())

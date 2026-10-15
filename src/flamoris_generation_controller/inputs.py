@@ -106,7 +106,7 @@ class ManagedInputs:
                 if (
                     record.get("source_kind") != "upload"
                     or record["source_asset_id"] is not None
-                    or record["media_kind"] != "image"
+                    or record["media_kind"] != record["mime_type"].split("/")[0]
                     or record["size_bytes"] > MAX_UPLOAD_BYTES
                 ):
                     raise ValueError("Invalid uploaded input provenance")
