@@ -83,7 +83,7 @@ class Upload(Request):
 
 
 class UploadBegin(Upload):
-    mime_type: Literal["image/png", "image/jpeg", "image/webp"]
+    mime_type: Literal["image/png", "image/jpeg", "image/webp", "audio/wav"]
     size_bytes: Annotated[int, Field(ge=1, le=8 * 1024**2)]
     sha256: Digest
 

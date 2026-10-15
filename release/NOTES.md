@@ -1,3 +1,3 @@
-# Generation Controller 1.0.4
+# FLAMORIS Generation Controller 1.0.5
 
-Add an explicit resident Irodori HTTP transport for the existing no-reference Speech recipe. Reuse one generation authority, bounded WAV assets and durable unknown/no-replay reservations. Model-loaded discovery and a distinct reviewed HTTP profile allow matched Studio integration. CLI Speech and Image remain supported. No runtime activation or model download is performed. Live provider acceptance is separate.
+Add bounded WAV uploads and HTTP Irodori reference speech (schema 9). Preserve no-reference and CLI generation, shared admission, immutable inputs and uncertain-work reservations. Temporary remote voices are deleted after confirmed settlement; retained receipts document pending cleanup. Requires matched Generation MCP, Studio and Hub upload catalogs. Source changes do not activate a runtime or attest voice quality.

@@ -17,6 +17,15 @@ from .workflows import checked_id
 MAX_UPLOAD_BYTES = 8 * 1024**2
 UPLOAD_SECONDS = 600
 IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp"}
+UPLOAD_TYPES = IMAGE_TYPES | {"audio/wav"}
+
+
+def decode_upload(data, mime):
+    if mime == "audio/wav":
+        from .reference_audio import validate_reference_audio
+
+        return validate_reference_audio(data)
+    return decode_image(data, mime)
 
 
 def pending_record(input_id, files, *, expired=False):
@@ -28,7 +37,7 @@ def pending_record(input_id, files, *, expired=False):
         if (
             record["version"] != 1
             or record["upload_id"] != input_id
-            or record["mime_type"] not in IMAGE_TYPES
+            or record["mime_type"] not in UPLOAD_TYPES
             or type(record["size_bytes"]) is not int
             or not 0 < record["size_bytes"] <= MAX_UPLOAD_BYTES
             or not isinstance(record["sha256"], str)
@@ -78,13 +87,13 @@ class InputUploads:
     async def begin(self, upload_id, mime_type, size_bytes, sha256):
         checked_id(upload_id)
         if (
-            mime_type not in IMAGE_TYPES
+            mime_type not in UPLOAD_TYPES
             or type(size_bytes) is not int
             or not 0 < size_bytes <= MAX_UPLOAD_BYTES
             or not isinstance(sha256, str)
             or not re.fullmatch(r"[0-9a-f]{64}", sha256)
         ):
-            raise ValueError("Invalid bounded image upload")
+            raise ValueError("Invalid bounded media upload")
         expected = dict(mime_type=mime_type, size_bytes=size_bytes, sha256=sha256)
         async with self.mutation():
             # Inspect an existing identity before quota pruning. An exact replay
@@ -194,7 +203,7 @@ class InputUploads:
                     return result
                 record = pending_record(upload_id, files)
                 if record is None:
-                    raise ValueError("Unknown image upload")
+                    raise ValueError("Unknown media upload")
                 with open_asset(files, "content") as fd:
                     if (
                         identity(os.fstat(fd)) != record["identity"]
@@ -210,7 +219,7 @@ class InputUploads:
                     # Keep the mutation lock until the bounded decoder exits,
                     # including cancellation, so aborted requests cannot pile up workers.
                     task = asyncio.create_task(
-                        asyncio.to_thread(decode_image, data, record["mime_type"])
+                        asyncio.to_thread(decode_upload, data, record["mime_type"])
                     )
                     self.managed._used.add(upload_id)
                     try:
@@ -237,7 +246,7 @@ class InputUploads:
                     source_asset_id=None,
                     source_kind="upload",
                     mime_type=record["mime_type"],
-                    media_kind="image",
+                    media_kind=record["mime_type"].split("/")[0],
                     size_bytes=record["size_bytes"],
                     sha256=record["sha256"],
                     created_at=now,

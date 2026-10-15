@@ -190,7 +190,8 @@ class JobStore:
                 if record["source_asset_id"] is None:
                     if (
                         metadata.get("source_kind") != "upload"
-                        or record["mime_type"] not in {"image/png", "image/jpeg", "image/webp"}
+                        or record["mime_type"]
+                        not in {"image/png", "image/jpeg", "image/webp", "audio/wav"}
                         or type(record["size_bytes"]) is not int
                         or not 1 <= record["size_bytes"] <= 8 * 1024**2
                     ):

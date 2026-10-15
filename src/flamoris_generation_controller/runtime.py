@@ -24,7 +24,12 @@ from .providers.irodori_http import IrodoriHTTPProvider
 from .providers.sheetsage2 import SheetSage2Config, SheetSage2Provider
 from .providers.yue2 import Yue2Config, Yue2Provider
 from .retention import RetentionStore
-from .speech import SPEECH_CAPABILITY, SPEECH_PROVIDER, SPEECH_TEMPLATE
+from .speech import (
+    SPEECH_CAPABILITY,
+    SPEECH_PROVIDER,
+    SPEECH_REFERENCE_TEMPLATE,
+    SPEECH_TEMPLATE,
+)
 from .transcription import (
     TRANSCRIPTION_CAPABILITY,
     TRANSCRIPTION_PROVIDER,
@@ -96,7 +101,9 @@ class GenerationController:
                         runtime_id="irodori-server-no-reference-v1"
                         if settings.irodori_url is not None
                         else "irodori-no-reference-v1",
-                        workflow_templates=(SPEECH_TEMPLATE,),
+                        workflow_templates=(SPEECH_REFERENCE_TEMPLATE, SPEECH_TEMPLATE)
+                        if settings.irodori_url is not None
+                        else (SPEECH_TEMPLATE,),
                     )
                 )
             if settings.yue2_config is not None:
@@ -150,6 +157,8 @@ class GenerationController:
             # Provider construction precedes JobStore/ManagedInputs because the input lease
             # validates the shared Hub reservation. Wire the adapter only after both exist.
             comfyui.managed_inputs = inputs
+            if settings.irodori_url is not None:
+                providers.get("irodori").managed_inputs = inputs
             if sheetsage2 is not None:
                 sheetsage2.managed_inputs = inputs
 
