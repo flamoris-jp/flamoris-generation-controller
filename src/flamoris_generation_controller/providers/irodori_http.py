@@ -75,7 +75,7 @@ class IrodoriHTTPProvider:
                         and raw["runtime"].get("loaded") is True
                         and not self._closed
                     )
-                    checkpoint = raw["model"].get("hf_checkpoint")
+                    checkpoint = raw["model"].get("hf_checkpoint") if available else None
                     reference = (
                         available
                         and isinstance(checkpoint, str)

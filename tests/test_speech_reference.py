@@ -250,3 +250,22 @@ def test_pcm_reference_bounds_and_truncation(channels, rate):
     assert validate_reference_audio(data)["channels"] == channels
     with pytest.raises(ValueError):
         validate_reference_audio(data[:-1])
+
+
+@pytest.mark.parametrize("raw", [None, [], {}, {"status": "ok", "model": None}])
+async def test_malformed_health_is_unavailable_without_reference_side_effects(settings, raw):
+    async def handle(request):
+        assert request.url.path == "/health"
+        return httpx.Response(200, json=raw)
+
+    instance = controller(settings, ReferenceServer())
+    speech = instance.providers.get("irodori")
+    await speech.client.aclose()
+    speech.client = httpx.AsyncClient(
+        base_url="http://127.0.0.1:8088", transport=httpx.MockTransport(handle)
+    )
+    try:
+        health = await speech.health()
+        assert not health.available and health.details["reference_audio"] is False
+    finally:
+        await instance.close()
