@@ -117,14 +117,17 @@ async def test_reference_upload_generate_cleanup_and_retained_identity(settings)
         assert "ref_wav" not in server.posts[0]["irodori"]
         assert server.deleted == [server.posts[0]["voice"]]
         assert server.voices == {}
-        assert not (settings.output_dir / "irodori-http-staging" / execution / "reference.json").exists()
+        receipt = settings.output_dir / "irodori-http-staging" / execution / "reference.json"
+        assert not receipt.exists()
         # References remain reusable; remote temporary voices are not a second input owner.
         assert instance.inputs.get(metadata["input_id"])["sha256"] == metadata["sha256"]
     finally:
         await instance.close()
 
 
-@pytest.mark.parametrize("checkpoint", ["Aratako/Irodori-TTS-500M-v2-VoiceDesign", None, {}, "other"])
+@pytest.mark.parametrize(
+    "checkpoint", ["Aratako/Irodori-TTS-500M-v2-VoiceDesign", None, {}, "other"]
+)
 async def test_non_reference_models_never_upload_or_synthesize(settings, checkpoint):
     server = ReferenceServer()
     server.checkpoint = checkpoint
@@ -205,7 +208,10 @@ async def test_cleanup_failure_retains_receipt_without_losing_valid_output(setti
         job = await instance.jobs.submit(recipe["workflow_id"])
         speech = instance.providers.get("irodori")
         assert (await finish(speech, job["provider_execution_id"])).status == "completed"
-        receipt = settings.output_dir / "irodori-http-staging" / job["provider_execution_id"] / "reference.json"
+        receipt = (
+            settings.output_dir / "irodori-http-staging"
+            / job["provider_execution_id"] / "reference.json"
+        )
         assert json.loads(receipt.read_text())["voice_id"] in server.voices
         assert await speech.materialize(job["provider_execution_id"], "speech.wav") == wav()
     finally:

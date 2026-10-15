@@ -403,7 +403,11 @@ class WorkflowStore:
             **recipe.model_dump(mode="json"),
             "prompt": prompt,
             **(
-                {"speech": speech_profile(self.speech_http, isinstance(recipe, ReferenceSpeechRecipe))}
+                {
+                    "speech": speech_profile(
+                        self.speech_http, isinstance(recipe, ReferenceSpeechRecipe)
+                    )
+                }
                 if isinstance(recipe, SpeechRecipe)
                 else {}
             ),

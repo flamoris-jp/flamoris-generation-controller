@@ -23,6 +23,13 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
       - run: python -m pip install -e '.[dev,http]'
+      - name: Temporary reference-speech formatting diagnostics
+        run: |
+          ruff check --fix .
+          ruff format .
+          printf 'ISSUE21_FORMAT_BEGIN\n'
+          git diff --no-ext-diff
+          printf 'ISSUE21_FORMAT_END\n'
       - run: ruff check .
       - run: ruff format --check .
       - run: python -m pytest
