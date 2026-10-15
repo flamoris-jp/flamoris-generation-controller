@@ -42,9 +42,9 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh api 'repos/'"$GITHUB_REPOSITORY"'/git/ref/tags/v1.0.4' > /dev/null 2>&1; then
+          if gh api 'repos/'"$GITHUB_REPOSITORY"'/git/ref/tags/v1.0.5' > /dev/null 2>&1; then
             echo 'Release tag already exists; refusing to replace it'
             exit 1
           fi
-          gh release create v1.0.4 dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Generation Controller v1.0.4' --notes-file release/NOTES.md --latest
+          gh release create v1.0.5 dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Generation Controller v1.0.5' --notes-file release/NOTES.md --latest
 
