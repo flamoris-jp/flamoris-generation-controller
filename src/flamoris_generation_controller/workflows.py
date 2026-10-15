@@ -22,11 +22,11 @@ from .music import (
 from .speech import (
     SPEECH_CAPABILITY,
     SPEECH_PROVIDER,
-    SPEECH_TEMPLATE,
     SPEECH_REFERENCE_TEMPLATE,
+    SPEECH_TEMPLATE,
     ReferenceSpeechRecipe,
-    reference_speech_descriptor,
     SpeechRecipe,
+    reference_speech_descriptor,
     speech_descriptor,
     speech_profile,
 )
@@ -373,7 +373,8 @@ class WorkflowStore:
         native = {
             SPEECH_TEMPLATE: (self.speech_enabled, SpeechRecipe),
             SPEECH_REFERENCE_TEMPLATE: (
-                self.speech_enabled and self.speech_http, ReferenceSpeechRecipe
+                self.speech_enabled and self.speech_http,
+                ReferenceSpeechRecipe,
             ),
             MUSIC_TEMPLATE: (self.music_enabled, MusicRecipe),
             TRANSCRIPTION_TEMPLATE: (self.transcription_enabled, TranscriptionRecipe),

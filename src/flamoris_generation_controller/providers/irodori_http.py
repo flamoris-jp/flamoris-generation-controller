@@ -77,7 +77,8 @@ class IrodoriHTTPProvider:
                     )
                     checkpoint = raw["model"].get("hf_checkpoint")
                     reference = (
-                        available and isinstance(checkpoint, str)
+                        available
+                        and isinstance(checkpoint, str)
                         and checkpoint in REFERENCE_CHECKPOINTS
                     )
         except (httpx.HTTPError, TimeoutError, ValueError):
@@ -100,9 +101,7 @@ class IrodoriHTTPProvider:
             raise SubmissionRejected("Invalid native speech request")
         health = await self.health()
         reference = isinstance(request.payload, ReferenceSpeechRecipe)
-        if reference and (
-            not health.details.get("reference_audio") or self.managed_inputs is None
-        ):
+        if reference and (not health.details.get("reference_audio") or self.managed_inputs is None):
             raise SubmissionRejected("The configured model cannot accept reference speech")
         if not health.available or len(self._runs) >= MAX_RUNS:
             raise SubmissionRejected("Resident speech runtime is unavailable")
@@ -181,11 +180,13 @@ class IrodoriHTTPProvider:
                 with AssetFiles(self.stage_root, execution_id, create=False) as files:
                     files.write(
                         "reference.json",
-                        json.dumps({
-                            "voice_id": voice_id,
-                            "size_bytes": len(reference_data),
-                            "sha256": hashlib.sha256(reference_data).hexdigest(),
-                        }).encode(),
+                        json.dumps(
+                            {
+                                "voice_id": voice_id,
+                                "size_bytes": len(reference_data),
+                                "sha256": hashlib.sha256(reference_data).hexdigest(),
+                            }
+                        ).encode(),
                         replace=False,
                     )
                 await self._upload_reference(voice_id, reference_data)
@@ -254,8 +255,10 @@ class IrodoriHTTPProvider:
             run.snapshot = JobSnapshot(
                 status="failed" if settled or not speech_started else "unknown",
                 error={
-                    "code": "invalid_speech_output" if settled
-                    else "reference_upload_failed" if not speech_started
+                    "code": "invalid_speech_output"
+                    if settled
+                    else "reference_upload_failed"
+                    if not speech_started
                     else "speech_outcome_unknown"
                 },
             )
@@ -271,36 +274,46 @@ class IrodoriHTTPProvider:
                         pass  # Retain the bounded receipt if local cleanup is uncertain.
 
     async def _upload_reference(self, voice_id, data):
-        async with asyncio.timeout(30), self.client.stream(
-            "POST", "/v1/audio/voices", data={"voice_id": voice_id},
-            files={"file": ("reference.wav", data, "audio/wav")},
-            headers={"Accept": "application/json", "Accept-Encoding": "identity"},
-        ) as response:
+        async with (
+            asyncio.timeout(30),
+            self.client.stream(
+                "POST",
+                "/v1/audio/voices",
+                data={"voice_id": voice_id},
+                files={"file": ("reference.wav", data, "audio/wav")},
+                headers={"Accept": "application/json", "Accept-Encoding": "identity"},
+            ) as response,
+        ):
             if response.status_code != 201:
                 raise ValueError("Reference upload was not accepted")
             raw = await self._bounded_json(response)
             if (
-                type(raw) is not dict or raw.get("id") != voice_id
+                type(raw) is not dict
+                or raw.get("id") != voice_id
                 or raw.get("object") != "voice_file"
-                or type(raw.get("bytes")) is not int or raw["bytes"] != len(data)
+                or type(raw.get("bytes")) is not int
+                or raw["bytes"] != len(data)
                 or raw.get("filename") != voice_id + ".wav"
             ):
                 raise ValueError("Invalid reference upload receipt")
 
     async def _delete_reference(self, voice_id):
         try:
-            async with asyncio.timeout(10), self.client.stream(
-                "DELETE", "/v1/audio/voices/" + voice_id,
-                headers={"Accept-Encoding": "identity"},
-            ) as response:
+            async with (
+                asyncio.timeout(10),
+                self.client.stream(
+                    "DELETE",
+                    "/v1/audio/voices/" + voice_id,
+                    headers={"Accept-Encoding": "identity"},
+                ) as response,
+            ):
                 if response.status_code == 404:
                     return True
                 if response.status_code != 200:
                     return False
                 raw = await self._bounded_json(response)
                 return (
-                    type(raw) is dict and raw.get("id") == voice_id
-                    and raw.get("deleted") is True
+                    type(raw) is dict and raw.get("id") == voice_id and raw.get("deleted") is True
                 )
         except (httpx.HTTPError, OSError, ValueError, TimeoutError):
             return False

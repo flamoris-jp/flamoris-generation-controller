@@ -8,6 +8,7 @@ from email.parser import BytesParser
 
 import httpx
 import pytest
+from test_irodori_http import Server, finish, wav
 
 from flamoris_generation_controller.contracts import CallerContext
 from flamoris_generation_controller.providers.base import SubmissionRejected
@@ -18,7 +19,6 @@ from flamoris_generation_controller.speech import (
     reference_speech_descriptor,
     speech_profile,
 )
-from test_irodori_http import Server, finish, wav
 
 
 class ReferenceServer(Server):
@@ -33,15 +33,20 @@ class ReferenceServer(Server):
 
     async def handle(self, request):
         if request.url.path == "/health":
-            return httpx.Response(200, json={
-                "status": "ok",
-                "model": {"id": self.model, "hf_checkpoint": self.checkpoint},
-                "runtime": {"loaded": self.loaded},
-            })
+            return httpx.Response(
+                200,
+                json={
+                    "status": "ok",
+                    "model": {"id": self.model, "hf_checkpoint": self.checkpoint},
+                    "runtime": {"loaded": self.loaded},
+                },
+            )
         if request.url.path == "/v1/audio/voices":
             message = BytesParser(policy=policy.default).parsebytes(
-                b"Content-Type: " + request.headers["content-type"].encode()
-                + b"\r\nMIME-Version: 1.0\r\n\r\n" + request.content
+                b"Content-Type: "
+                + request.headers["content-type"].encode()
+                + b"\r\nMIME-Version: 1.0\r\n\r\n"
+                + request.content
             )
             parts = {
                 part.get_param("name", header="content-disposition"): part.get_payload(decode=True)
@@ -54,10 +59,15 @@ class ReferenceServer(Server):
                 return httpx.Response(self.upload_status)
             assert key not in self.voices
             self.voices[key] = parts["file"]
-            return httpx.Response(201, json={
-                "id": key, "object": "voice_file", "filename": key + ".wav",
-                "bytes": len(parts["file"]),
-            })
+            return httpx.Response(
+                201,
+                json={
+                    "id": key,
+                    "object": "voice_file",
+                    "filename": key + ".wav",
+                    "bytes": len(parts["file"]),
+                },
+            )
         if request.method == "DELETE":
             key = request.url.path.rsplit("/", 1)[-1]
             if self.cleanup_status != 200:
@@ -71,8 +81,12 @@ class ReferenceServer(Server):
 async def upload(instance, data=None):
     data = wav() if data is None else data
     key = "c" * 32
-    args = {"upload_id": key, "mime_type": "audio/wav", "size_bytes": len(data),
-            "sha256": hashlib.sha256(data).hexdigest()}
+    args = {
+        "upload_id": key,
+        "mime_type": "audio/wav",
+        "size_bytes": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(),
+    }
     await instance.uploads.begin(**args)
     await instance.uploads.write(key, 0, base64.b64encode(data).decode(), args["sha256"])
     return await instance.uploads.finish(key)
@@ -84,10 +98,14 @@ def controller(settings, server):
 
 
 async def build(instance, key):
-    return await instance.invoke("workflows.build", {
-        "template": "speech-reference",
-        "parameters": {"text": "Reference speech", "reference_audio": key},
-    }, context=CallerContext.internal())
+    return await instance.invoke(
+        "workflows.build",
+        {
+            "template": "speech-reference",
+            "parameters": {"text": "Reference speech", "reference_audio": key},
+        },
+        context=CallerContext.internal(),
+    )
 
 
 async def test_reference_upload_generate_cleanup_and_retained_identity(settings):
@@ -209,8 +227,10 @@ async def test_cleanup_failure_retains_receipt_without_losing_valid_output(setti
         speech = instance.providers.get("irodori")
         assert (await finish(speech, job["provider_execution_id"])).status == "completed"
         receipt = (
-            settings.output_dir / "irodori-http-staging"
-            / job["provider_execution_id"] / "reference.json"
+            settings.output_dir
+            / "irodori-http-staging"
+            / job["provider_execution_id"]
+            / "reference.json"
         )
         assert json.loads(receipt.read_text())["voice_id"] in server.voices
         assert await speech.materialize(job["provider_execution_id"], "speech.wav") == wav()
