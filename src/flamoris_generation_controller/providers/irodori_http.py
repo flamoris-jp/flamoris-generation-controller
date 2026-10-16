@@ -157,7 +157,7 @@ class IrodoriHTTPProvider:
             "irodori": {
                 "no_ref": True,
                 "caption": p.caption or None,
-                "seconds": p.seconds,
+                **({"seconds": p.seconds} if p.seconds is not None else {}),
                 "num_steps": p.steps,
                 "seed": p.seed,
                 "num_candidates": 1,

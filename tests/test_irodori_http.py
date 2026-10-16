@@ -314,3 +314,25 @@ async def test_success_uses_controller_assets_and_releases_shared_capacity(setti
         assert again["job_id"] != made["job_id"]
     finally:
         await instance.close()
+
+
+@pytest.mark.parametrize("seconds", [None, 4.0])
+async def test_http_automatic_duration_omits_seconds_but_keeps_bounds(tmp_path, seconds):
+    server = Server()
+    instance = provider(tmp_path, server)
+    try:
+        req = GenerationRequest(
+            "speech.generate",
+            "a" * 32,
+            SpeechRecipe(parameters={"text": "こんにちは", "seconds": seconds}),
+        )
+        made = await instance.submit(req, "b" * 32)
+        assert (await finish(instance, made.execution_id)).status == "completed"
+        options = server.posts[0]["irodori"]
+        assert ("seconds" in options) == (seconds is not None)
+        if seconds is not None:
+            assert options["seconds"] == seconds
+        assert (options["min_seconds"], options["max_seconds"]) == (0.5, 30)
+        assert len(server.posts) == 1
+    finally:
+        await instance.close()

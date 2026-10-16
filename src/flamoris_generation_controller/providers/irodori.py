@@ -279,8 +279,6 @@ class IrodoriProvider:
             "--no-ref",
             "--output-wav",
             str(output),
-            "--seconds",
-            str(p.seconds),
             "--num-steps",
             str(p.steps),
             "--seed",
@@ -299,6 +297,8 @@ class IrodoriProvider:
             self.config.codec_device,
             "--no-show-timings",
         ]
+        if p.seconds is not None:
+            argv += ["--seconds", str(p.seconds)]
         if p.caption:
             argv.append("--caption=" + p.caption)
         return argv

@@ -1,3 +1,16 @@
+# Automatic Irodori duration — 2026-10-17
+
+Source 1.0.7 makes omitted/null seconds automatic in reference and no-reference
+speech. HTTP omits manual seconds while retaining estimation bounds; CLI omits
+--seconds. Explicit numeric/retained recipes keep fixed duration. Nullable
+metadata is matched by the Studio slice; no job/schema IDs or external tools
+change. The earlier successful fixed-duration WAV was not a quality pass: the
+operator heard extra words. Automatic timing does not attest speech quality.
+
+Local: 402 tests, Ruff/format and package checks pass. CI/publication/live
+acceptance remain pending. Existing timeout, ownership and unknown/no-replay
+fences remain unchanged.
+
 # Production reference images — 2026-10-12
 
 Controller #13 implements IPAdapter appearance/style and prepared-map ControlNet profiles, multi-image staging and schema 8; retains schema-7 img2img. Includes concrete ComfyWorkFlow examples and a local graph-writing helper. Source target 1.0.1, not a published release. Current local checks: 319 domain/API/CLI tests, Ruff and wheel/sdist build pass; CI receipts live with the PR. Studio #79 is the matching UI/owner integration. No deployment, model download or live inference occurred.

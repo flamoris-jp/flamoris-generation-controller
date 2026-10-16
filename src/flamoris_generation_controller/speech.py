@@ -43,7 +43,7 @@ class SpeechParameters(BaseModel):
 
     text: str = Field(min_length=1, max_length=512, strict=True)
     caption: str = Field(default="", max_length=512, strict=True)
-    seconds: float = Field(default=10, ge=0.5, le=30, allow_inf_nan=False, strict=True)
+    seconds: float | None = Field(default=None, ge=0.5, le=30, allow_inf_nan=False, strict=True)
     steps: int = Field(default=40, ge=1, le=80, strict=True)
     seed: int = Field(default=0, ge=0, le=2**53 - 1, strict=True)
 
@@ -102,6 +102,13 @@ def speech_descriptor(http=False):
     properties = SpeechParameters.model_json_schema()["properties"]
     parameters = {}
     for name, schema in properties.items():
+        if name == "seconds":
+            # Keep numeric controls discoverable while explicitly advertising
+            # omission/null as automatic duration, rather than another default.
+            schema = {
+                **next(s for s in schema["anyOf"] if s.get("type") == "number"),
+                "default": None,
+            }
         spec = {
             key: value
             for key, value in schema.items()
@@ -113,6 +120,11 @@ def speech_descriptor(http=False):
         if name in {"text", "caption"}:
             spec["max_bytes"] = 2048
         parameters[name] = {**spec, "role": name, "required": "default" not in schema}
+        if name == "seconds":
+            parameters[name].update(
+                nullable=True,
+                description="Omit or use null for auto duration; set a number for fixed length.",
+            )
     return {
         "id": SPEECH_TEMPLATE,
         "name": "Irodori speech without reference audio",
