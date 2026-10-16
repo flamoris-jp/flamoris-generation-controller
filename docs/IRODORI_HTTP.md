@@ -104,3 +104,19 @@ manager, record a short Japanese phrase in Studio, listen to it and verify owned
 preview/download and another account's denial. Record actual output metadata and
 receipt separately. Disable Studio Speech and remove the HTTP opt-in for rollback;
 preserve all request fences, unknown journals and generated assets.
+
+## Automatic recording duration (1.0.7)
+
+New speech recipes default `seconds` to `null`. Omit it or pass null to let
+Irodori estimate duration; the HTTP adapter omits its manual seconds option.
+Explicit 0.5–30 second values remain fixed, and retained recipes with numeric
+values keep that behavior. The existing 0.5–30 second HTTP estimation bounds,
+WAV/byte limits and 900-second operation timeout remain independent safeguards.
+The CLI adapter also omits --seconds for automatic mode; prediction depends on
+the configured checkpoint (older checkpoints may use their upstream fallback).
+Automatic duration is not a guarantee of pronunciation or output quality.
+
+Descriptors retain a numeric control with nullable=true and a null default.
+Studio must use the matched automatic-duration contract before this Controller
+is deployed; older strict Studio speech descriptors do not match the new form.
+No new external MCP tool, job authority, provider retry or model activation is added.

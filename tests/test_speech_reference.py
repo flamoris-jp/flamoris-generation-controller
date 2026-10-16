@@ -132,6 +132,8 @@ async def test_reference_upload_generate_cleanup_and_retained_identity(settings)
         assert server.posts[0]["voice"] == "flamoris_" + execution
         assert server.posts[0]["irodori"]["no_ref"] is False
         assert server.posts[0]["irodori"]["max_ref_seconds"] == 30
+        assert "seconds" not in server.posts[0]["irodori"]
+        assert server.posts[0]["irodori"]["max_seconds"] == 30
         assert "ref_wav" not in server.posts[0]["irodori"]
         assert server.deleted == [server.posts[0]["voice"]]
         assert server.voices == {}

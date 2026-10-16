@@ -59,3 +59,45 @@ def test_workflow_opt_in_and_attestation_preconditions(tmp_path):
     store.speech_enabled = False
     with pytest.raises(ValueError, match="disabled"):
         store.get(built["workflow_id"])
+
+
+@pytest.mark.parametrize(
+    "params", [{"text": "こんにちは"}, {"text": "こんにちは", "seconds": None}]
+)
+def test_automatic_duration_survives_recipe_serialization(params):
+    recipe = SpeechRecipe(parameters=params)
+    assert recipe.parameters.seconds is None
+    assert SpeechRecipe.model_validate_json(recipe.model_dump_json()).parameters.seconds is None
+    spec = speech_descriptor(True)["parameters"]["seconds"]
+    assert spec["type"] == "number" and spec["nullable"] is True
+    assert spec["default"] is None and spec["required"] is False
+    assert (spec["minimum"], spec["maximum"]) == (0.5, 30)
+
+
+def test_retained_fixed_duration_is_not_reinterpreted_as_automatic():
+    retained = SpeechRecipe(parameters={"text": "こんにちは", "seconds": 10.0})
+    assert SpeechRecipe.model_validate_json(retained.model_dump_json()).parameters.seconds == 10.0
+
+
+@pytest.mark.parametrize("seconds", [None, 3.5])
+def test_cli_omits_manual_duration_option_only_in_automatic_mode(seconds):
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from flamoris_generation_controller.providers.irodori import IrodoriProvider
+
+    provider = object.__new__(IrodoriProvider)
+    provider.config = SimpleNamespace(
+        python=Path("/python"),
+        source_root=Path("/source"),
+        checkpoint=Path("/model"),
+        codec=Path("/codec"),
+        model_device="cpu",
+        codec_device="cpu",
+    )
+    args = provider._argv(
+        SpeechRecipe(parameters={"text": "こんにちは", "seconds": seconds}), Path("/output.wav")
+    )
+    assert ("--seconds" in args) == (seconds is not None)
+    if seconds is not None:
+        assert args[args.index("--seconds") + 1] == "3.5"
