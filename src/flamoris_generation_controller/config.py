@@ -62,7 +62,7 @@ class Settings(BaseModel):
     irodori_url: HttpUrl | None = None
     irodori_model: str = Field(default="irodori-tts", min_length=1, max_length=128)
     irodori_token: str | None = Field(default=None, min_length=1, max_length=512, repr=False)
-    irodori_timeout: float = Field(default=300, ge=5, le=300, allow_inf_nan=False)
+    irodori_timeout: float = Field(default=900, ge=5, le=1800, allow_inf_nan=False)
     yue2_config: Path | None = None
     yue2_output_root: Path | None = None
     sheetsage2_config: Path | None = None

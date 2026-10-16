@@ -66,3 +66,21 @@ Controller #17 is merged and v1.0.2 published. Final validation passed 313 tests
 ## 2026-10-14 resident Irodori integration
 
 Controller #19 adds an explicitly configured resident HTTP transport, strict model-loaded discovery, single bounded no-reference POST and WAV output through the existing reservation/asset authority. The reviewed server API has no targeted cancel or durable request lookup; cancellation remains pending and lost/restart outcomes stay reserved. Controller 1.0.4 is prepared with matched Studio/Generation integration. Source tests pass; merge, publication, private configuration and real recording acceptance remain pending.
+# Resident speech timeout and offline recovery — 2026-10-16
+
+Source target 1.0.6 extends the resident HTTP recording budget from 300 seconds to
+900 seconds by default, configurable up to 1800. Explicit existing settings remain
+unchanged. Runtime logs showed a 15-second recording completing after 315.78 seconds;
+the former maximum therefore expired before the response was available.
+
+The local-only `flamoris-reconcile-irodori` command supports operator-confirmed
+settlement with exact job/execution identity and the existing lifetime owner lock.
+It durably retains the original reservation and evidence before releasing that
+specific reservation. It does not replay inference, adopt audio, report provider
+success or extend MCP/HTTP permissions. See [the operational contract](docs/IRODORI_HTTP.md).
+
+Local validation: 395 tests passed, lint/format checks passed, and wheel-from-sdist
+build succeeded. Normal provider tests use fake HTTP; actual speech quality,
+publication, host update and live reconciliation remain unperformed.
+
+---

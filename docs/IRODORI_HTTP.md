@@ -18,7 +18,11 @@ the existing trusted private network; neither service needs public exposure.
 Configure `FLAMORIS_IRODORI_MODEL` when the server uses a different model ID
 (default `irodori-tts`). Optional `FLAMORIS_IRODORI_TOKEN` supplies server
 authentication; keep it private. `FLAMORIS_IRODORI_TIMEOUT` bounds the entire
-recording request to 5–300 seconds (default 300).
+recording request to 5–1800 seconds (default 900). This budget includes reference
+preparation, synthesis, waveform decoding, watermarking and response transfer.
+An explicit existing value of 300 remains 300; update the operator configuration
+when deploying the longer budget. A fifteen-second recording was observed to
+finish in 315.78 seconds, after the previous maximum budget had expired.
 
 `FLAMORIS_IRODORI_CONFIG` remains the original CLI transport. Configure exactly
 one transport. No configuration leaves Speech disabled. The HTTP adapter checks
@@ -57,6 +61,38 @@ the eventual recording may complete. Disconnecting HTTP cannot certify that GPU
 inference stopped. Closing/restarting Controller preserves uncertain admission;
 a staged WAV or healthy server never proves completion after restart. Reconcile
 unknown work using the actual runtime before allowing another recording.
+
+## Offline reconciliation of a settled request
+
+If the response was lost, first match the provider execution ID to actual runtime
+logs and confirm that synthesis has finished or was definitively stopped. A
+healthy service or elapsed timeout alone is insufficient. A completion log proves
+execution settlement, not intelligible speech or receipt of the audio.
+
+Stop the Controller host before using the local-only operator command:
+
+```sh
+flamoris-reconcile-irodori --output-root /configured/output/root \
+  --job-id EXACT_JOB_ID --execution-id EXACT_PROVIDER_EXECUTION_ID \
+  --evidence-note 'Operator matched runtime execution and confirmed settlement'
+```
+
+The default is a dry run. After reviewing the exact target and runtime evidence,
+repeat with `--confirmed-runtime-settled --apply`. The command acquires the same
+output-root lifetime lock, rejects another live owner, validates the exact active
+Irodori speech identity and resident HTTP staging, then durably preserves the
+original reservation and operator evidence in
+`job-authority/reconciled-<job-id>.json` before releasing that reservation.
+It refuses other jobs/providers and retired recipes. An uncertain write stops
+without claiming success; an explicit retry validates the retained receipt.
+
+Restart the host and verify admission before submitting a new recording. No
+request is replayed, no output is adopted or marked successful, and neither the
+remote reference voice nor existing input/output files are deleted. The old
+unknown request is retained as an operator reconciliation receipt; this does not
+publish a playable asset or repair a Studio history entry. Normal MCP/HTTP tools
+still cannot release unknown work automatically. The command can also be run as
+`python -m flamoris_generation_controller.speech_recovery`.
 
 ## Acceptance and rollback
 
