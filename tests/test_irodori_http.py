@@ -94,11 +94,41 @@ async def finish(instance, execution):
         {"irodori_url": "http://host", "irodori_config": "/tmp/config"},
         {"irodori_token": "private\n"},
         {"irodori_timeout": float("nan")},
+        {"irodori_timeout": 1801},
     ],
 )
 def test_config_rejects_ambiguous_or_unsafe_transport(values):
     with pytest.raises(ValidationError):
         Settings(**values)
+
+
+def test_long_speech_budget_and_explicit_operator_override(monkeypatch):
+    assert Settings().irodori_timeout == 900
+    monkeypatch.setenv("FLAMORIS_IRODORI_TIMEOUT", "1800")
+    assert Settings.from_env().irodori_timeout == 1800
+    monkeypatch.setenv("FLAMORIS_IRODORI_TIMEOUT", "300")
+    assert Settings.from_env().irodori_timeout == 300
+
+
+async def test_http_synthesis_uses_extended_budget(tmp_path):
+    server = Server()
+    seen = []
+    handle = server.handle
+
+    async def capture(request):
+        if request.url.path == "/v1/audio/speech":
+            seen.append(request.extensions["timeout"]["read"])
+        return await handle(request)
+
+    settings = Settings(irodori_url="http://127.0.0.1:8088", irodori_timeout=1200)
+    instance = IrodoriHTTPProvider(settings, tmp_path, transport=httpx.MockTransport(capture))
+    try:
+        made = await instance.submit(request(), "b" * 32)
+        assert (await finish(instance, made.execution_id)).status == "completed"
+        assert seen == [1200]
+        assert instance.timeout == 1200
+    finally:
+        await instance.close()
 
 
 async def test_loaded_health_and_single_bounded_payload(tmp_path):
