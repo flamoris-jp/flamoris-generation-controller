@@ -323,3 +323,27 @@ async def test_changed_installed_node_fails_before_post_without_unknown_reservat
         assert c.jobs._active_job_id is None
     finally:
         await c.close()
+
+
+def test_malformed_installed_widget_spec_is_an_explicit_rejection(declared):
+    settings, body, info = declared
+    info["CLIPLoader"]["input"]["required"]["clip_name"] = [{"unexpected": "widget"}]
+    store = WorkflowStore(
+        ModelCatalog(settings), settings.workflow_dir, declared_comfy_nodes=list(info)
+    )
+    with pytest.raises(ValueError, match="input type"):
+        store.definitions.register(**body, node_specs=info)
+
+
+def test_corrupt_declared_graph_record_rejects_without_reinterpretation(declared):
+    settings, body, info = declared
+    store = WorkflowStore(
+        ModelCatalog(settings), settings.workflow_dir, declared_comfy_nodes=list(info)
+    )
+    definition = store.definitions.register(**body, node_specs=info)
+    path = store.definitions.directory / (definition["id"][6:] + ".json")
+    record = json.loads(path.read_bytes())
+    record["graph"] = []
+    path.write_text(json.dumps(record))
+    with pytest.raises(ValueError, match="graph record"):
+        store.definitions.get(definition["id"])

@@ -134,6 +134,8 @@ def validate(graph, declaration, node_specs, allowed_nodes):
                 raise ValueError("Unsupported installed ComfyUI input specification")
             for definition in fields.values():
                 kind = definition[0]
+                if type(kind) not in (str, list):
+                    raise ValueError("Unsupported installed ComfyUI input type")
                 options = definition[1] if len(definition) == 2 else {}
                 for bound in ("min", "max"):
                     if bound in options and (

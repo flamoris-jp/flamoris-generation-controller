@@ -420,7 +420,12 @@ class ComfyDefinitions:
         ):
             raise ValueError("Invalid declared ComfyWorkFlow definition")
         # Reading remains possible if operator execution permission is revoked.
-        classes = {n.get("class_type") for n in record["graph"].values()}
+        if type(record["graph"]) is not dict or any(
+            type(n) is not dict or type(n.get("class_type")) is not str
+            for n in record["graph"].values()
+        ):
+            raise ValueError("Invalid declared ComfyWorkFlow graph record")
+        classes = {n["class_type"] for n in record["graph"].values()}
         graph, decl = validate(
             record["graph"], record["declaration"], record["node_specs"], classes
         )
