@@ -47,3 +47,15 @@ def test_shared_models_are_external_not_an_owned_resource(tmp_path):
     with pytest.raises(UpdateError) as error:
         inspect_domain(None, resources)
     assert error.value.code == "invalid_profile"
+
+
+def test_publish_target_matches_package_version():
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).parents[1]
+    version = re.search(r'^version = "([^\"]+)"', (root / "pyproject.toml").read_text(), re.M)[1]
+    workflow = (root / ".github/workflows/publish-package.yml").read_text()
+    assert f"gh release create v{version} " in workflow
+    assert f"git/ref/tags/v{version}'" in workflow
+    assert f"Generation Controller v{version}'" in workflow
