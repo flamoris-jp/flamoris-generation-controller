@@ -142,12 +142,16 @@ def validate_graph(graph):
 
 
 class ComfyDefinitions:
-    def __init__(self, directory):
+    def __init__(self, directory, *, catalog=None, allowed_nodes=()):
         self.directory = directory / "comfy-definitions-v1"
+        self.catalog = catalog
+        self.allowed_nodes = frozenset(allowed_nodes)
 
-    def register(self, name, graph):
+    def register(self, name, graph, declaration=None, *, node_specs=None):
         if type(name) is not str or not 1 <= len(name.strip()) <= 120:
             raise ValueError("Invalid ComfyWorkFlow display name")
+        if declaration is not None:
+            return self._register_declared(name, graph, declaration, node_specs)
         normalized, _parameters, _reference = validate_graph(graph)
         raw = json.dumps(
             normalized, sort_keys=True, separators=(",", ":"), allow_nan=False
@@ -173,6 +177,8 @@ class ComfyDefinitions:
         if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_DEFINITION_BYTES:
             raise ValueError("Unknown or invalid ComfyWorkFlow definition")
         record = decode_recipe(path.read_bytes())
+        if type(record) is dict and "declaration" in record:
+            return self._get_declared(definition_id, record)
         if (
             type(record) is not dict
             or set(record) != {"name", "graph"}
@@ -192,6 +198,40 @@ class ComfyDefinitions:
         from .workflows import builtin_descriptors
 
         name, _graph, defaults, reference = self.get(definition_id)
+        from .declared_comfy import Declaration
+
+        if isinstance(defaults, Declaration):
+            parameters = {}
+            for key, spec in defaults.parameters.items():
+                item = spec.model_dump(exclude={"targets"}, exclude_none=True)
+                if spec.default is None:
+                    item.pop("default", None)
+                if spec.role == "managed_input":
+                    item.update(mime_types=["image/png", "image/jpeg", "image/webp"])
+                parameters[key] = item
+            return {
+                "id": definition_id,
+                "name": name,
+                "kind": "registered-comfy",
+                "metadata_schema_version": 3,
+                "version": 1,
+                "definition_digest": definition_id[6:],
+                "definition_version": 1,
+                "provider_id": "comfyui",
+                "capability_id": "image.generate",
+                "image": {
+                    "profile": "declared-comfy-v1",
+                    "mode": "declared",
+                    "dimensions": {"mode": "graph"},
+                },
+                "parameters": parameters,
+                "readiness": {
+                    "state": "validated",
+                    "basis": "installed_object_info",
+                    "live_provider_verified": False,
+                    "generation_verified": False,
+                },
+            }
         base = deepcopy(builtin_descriptors()[0])
         base.update(
             {
@@ -256,10 +296,33 @@ class ComfyDefinitions:
 
     def inspect(self, definition_id):
         _name, graph, defaults, _reference = self.get(definition_id)
-        return {**self.descriptor(definition_id), "graph": graph, "defaults": defaults.model_dump()}
+        from .declared_comfy import Declaration
+
+        return {
+            **self.descriptor(definition_id),
+            "graph": graph,
+            **(
+                {"declaration": defaults.model_dump()}
+                if isinstance(defaults, Declaration)
+                else {"defaults": defaults.model_dump()}
+            ),
+        }
 
     def build(self, definition_id, parameters):
         _name, _graph, defaults, reference = self.get(definition_id)
+        from .declared_comfy import Declaration, values
+        from .workflows import DeclaredRecipe
+
+        if isinstance(defaults, Declaration):
+            checked = values(defaults, parameters, self.catalog)
+            images = {
+                k: v for k, v in checked.items() if defaults.parameters[k].role == "managed_input"
+            }
+            return DeclaredRecipe(
+                definition_id=definition_id,
+                parameters={k: v for k, v in checked.items() if k not in images},
+                images=images,
+            )
         if isinstance(defaults, ReferenceDefaults):
             return build_reference(definition_id, defaults, parameters)
         values = dict(parameters)
@@ -279,6 +342,23 @@ class ComfyDefinitions:
 
     def prompt(self, recipe, job_id=None):
         _name, _graph, defaults, reference = self.get(recipe.definition_id)
+        from .declared_comfy import Declaration, render, values
+        from .workflows import DeclaredRecipe
+
+        if isinstance(defaults, Declaration):
+            if not isinstance(recipe, DeclaredRecipe):
+                raise ValueError("Declared recipe schema mismatch")
+            checked = values(defaults, {**recipe.parameters, **recipe.images}, self.catalog)
+            if set(recipe.images) != {
+                k for k, v in defaults.parameters.items() if v.role == "managed_input"
+            }:
+                raise ValueError("Declared image binding mismatch")
+            prompt = render(_graph, defaults, checked)
+            # Recheck substituted widgets against the immutable registration contract.
+            self.validate_declared_prompt(recipe.definition_id, prompt)
+            return render(_graph, defaults, checked, job_id=job_id)
+        if isinstance(recipe, DeclaredRecipe):
+            raise ValueError("Declared recipe definition mismatch")
         if isinstance(recipe, ReferenceRecipe):
             if not isinstance(defaults, ReferenceDefaults) or set(recipe.images) != set(
                 defaults.roles
@@ -301,3 +381,86 @@ class ComfyDefinitions:
         if job_id is not None:
             prompt["7"]["inputs"]["filename_prefix"] = "flamoris/" + job_id
         return prompt
+
+    def _register_declared(self, name, graph, declaration, node_specs):
+        from .declared_comfy import validate
+
+        if not isinstance(node_specs, dict):
+            raise ValueError("Installed ComfyUI node specifications are required")
+        graph, decl = validate(graph, declaration, node_specs, self.allowed_nodes)
+        specs = {node["class_type"]: node_specs[node["class_type"]] for node in graph.values()}
+        # Check model defaults at registration; managed images are supplied at build.
+        for spec in decl.parameters.values():
+            if spec.role == "model" and spec.default is not None:
+                self.catalog.require(spec.model_kind, spec.default)
+        content = {"graph": graph, "declaration": decl.model_dump(), "node_specs": specs}
+        raw = json.dumps(content, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+        digest = hashlib.sha256(raw).hexdigest()
+        record = {"name": name.strip(), **content}
+        encoded = json.dumps(record, ensure_ascii=False, allow_nan=False).encode()
+        if len(encoded) > MAX_DEFINITION_BYTES:
+            raise ValueError("Declared definition and node specifications exceed byte limit")
+        path = self.directory / (digest + ".json")
+        if path.is_symlink():
+            raise ValueError("Invalid ComfyWorkFlow definition storage")
+        duplicate = path.exists()
+        if not duplicate:
+            if len(list(self.directory.glob("*.json"))) >= MAX_DEFINITIONS:
+                raise ValueError("ComfyWorkFlow definition capacity exceeded")
+            atomic_write(path, encoded)
+        return {**self.descriptor("comfy-" + digest), "duplicate": duplicate}
+
+    def _get_declared(self, definition_id, record):
+        from .declared_comfy import validate
+
+        if (
+            set(record) != {"name", "graph", "declaration", "node_specs"}
+            or type(record["name"]) is not str
+            or not 1 <= len(record["name"].strip()) <= 120
+        ):
+            raise ValueError("Invalid declared ComfyWorkFlow definition")
+        # Reading remains possible if operator execution permission is revoked.
+        classes = {n.get("class_type") for n in record["graph"].values()}
+        graph, decl = validate(
+            record["graph"], record["declaration"], record["node_specs"], classes
+        )
+        content = {k: record[k] for k in ("graph", "declaration", "node_specs")}
+        digest = hashlib.sha256(
+            json.dumps(content, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+        ).hexdigest()
+        if "comfy-" + digest != definition_id:
+            raise ValueError("ComfyWorkFlow definition digest mismatch")
+        return record["name"], graph, decl, False
+
+    def declared_specs(self, definition_id):
+        path = self.directory / (definition_id[6:] + ".json")
+        self.get(definition_id)
+        record = decode_recipe(path.read_bytes())
+        return record["node_specs"]
+
+    def validate_declared_prompt(self, definition_id, prompt, node_specs=None):
+        from .declared_comfy import validate
+
+        name, graph, decl, _reference = self.get(definition_id)
+        # Validate effective values with their declared constraints without requiring
+        # the graph widgets to remain equal to registration defaults.
+        declaration = decl.model_dump()
+        for spec in declaration["parameters"].values():
+            if spec["role"] != "managed_input":
+                spec["default"] = None
+                spec["required"] = True
+        validate(
+            prompt,
+            declaration,
+            node_specs if node_specs is not None else self.declared_specs(definition_id),
+            self.allowed_nodes,
+        )
+
+    def output_node(self, recipe):
+        from .workflows import DeclaredRecipe
+
+        return (
+            self.get(recipe.definition_id)[2].output.node
+            if isinstance(recipe, DeclaredRecipe)
+            else "7"
+        )

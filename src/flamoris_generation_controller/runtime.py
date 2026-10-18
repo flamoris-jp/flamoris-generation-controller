@@ -60,6 +60,7 @@ class GenerationController:
                 speech_http=settings.irodori_url is not None,
                 music_enabled=settings.yue2_config is not None,
                 transcription_enabled=settings.sheetsage2_config is not None,
+                declared_comfy_nodes=settings.declared_comfy_nodes,
             )
             client = ComfyUIClient(settings, transport)
             comfyui = ComfyUIProvider(client, catalog, workflows)
@@ -255,6 +256,9 @@ class GenerationController:
             )
         elif operation == "models.list":
             result = {"models": self.catalog.list(args["kind"])}
+        elif operation == "comfy.register" and args["declaration"] is not None:
+            specs = await self.client.object_info(args["graph"])
+            result = self.workflows.definitions.register(**args, node_specs=specs)
         elif operation == "jobs.submit":
             result = await self.jobs.submit(args["workflow_id"], provenance=context.provenance)
         elif operation == "assets.get":

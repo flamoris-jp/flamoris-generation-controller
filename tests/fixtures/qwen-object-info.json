@@ -1,0 +1,271 @@
+{
+  "UnetLoaderGGUF": {
+    "input": {
+      "required": {
+        "unet_name": [
+          [
+            "qwen-image-edit-2511-Q4_K_M.gguf"
+          ]
+        ]
+      },
+      "optional": {}
+    },
+    "output": [
+      "MODEL"
+    ],
+    "output_node": false
+  },
+  "CLIPLoader": {
+    "input": {
+      "required": {
+        "clip_name": [
+          [
+            "qwen_2.5_vl_7b_fp8_scaled.safetensors"
+          ]
+        ],
+        "type": [
+          [
+            "qwen_image"
+          ]
+        ],
+        "device": [
+          [
+            "default"
+          ]
+        ]
+      },
+      "optional": {}
+    },
+    "output": [
+      "CLIP"
+    ],
+    "output_node": false
+  },
+  "VAELoader": {
+    "input": {
+      "required": {
+        "vae_name": [
+          [
+            "qwen_image_vae.safetensors"
+          ]
+        ]
+      },
+      "optional": {}
+    },
+    "output": [
+      "VAE"
+    ],
+    "output_node": false
+  },
+  "LoadImage": {
+    "input": {
+      "required": {
+        "image": [
+          [
+            "fixture.png"
+          ],
+          {
+            "image_upload": true
+          }
+        ]
+      },
+      "optional": {}
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_node": false
+  },
+  "TextEncodeQwenImageEditPlus": {
+    "input": {
+      "required": {
+        "clip": [
+          "CLIP"
+        ],
+        "prompt": [
+          "STRING",
+          {}
+        ]
+      },
+      "optional": {
+        "vae": [
+          "VAE"
+        ],
+        "image1": [
+          "IMAGE"
+        ]
+      }
+    },
+    "output": [
+      "CONDITIONING"
+    ],
+    "output_node": false
+  },
+  "ModelSamplingAuraFlow": {
+    "input": {
+      "required": {
+        "model": [
+          "MODEL"
+        ],
+        "shift": [
+          "FLOAT",
+          {
+            "min": 0,
+            "max": 100
+          }
+        ]
+      },
+      "optional": {}
+    },
+    "output": [
+      "MODEL"
+    ],
+    "output_node": false
+  },
+  "EmptySD3LatentImage": {
+    "input": {
+      "required": {
+        "width": [
+          "INT",
+          {
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ],
+        "height": [
+          "INT",
+          {
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ],
+        "batch_size": [
+          "INT",
+          {
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ]
+      },
+      "optional": {}
+    },
+    "output": [
+      "LATENT"
+    ],
+    "output_node": false
+  },
+  "KSampler": {
+    "input": {
+      "required": {
+        "model": [
+          "MODEL"
+        ],
+        "seed": [
+          "INT",
+          {
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ],
+        "steps": [
+          "INT",
+          {
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ],
+        "cfg": [
+          "FLOAT",
+          {
+            "min": 0,
+            "max": 100
+          }
+        ],
+        "sampler_name": [
+          [
+            "euler"
+          ]
+        ],
+        "scheduler": [
+          [
+            "simple"
+          ]
+        ],
+        "positive": [
+          "CONDITIONING"
+        ],
+        "negative": [
+          "CONDITIONING"
+        ],
+        "latent_image": [
+          "LATENT"
+        ],
+        "denoise": [
+          "FLOAT",
+          {
+            "min": 0,
+            "max": 100
+          }
+        ]
+      },
+      "optional": {}
+    },
+    "output": [
+      "LATENT"
+    ],
+    "output_node": false
+  },
+  "VAEDecode": {
+    "input": {
+      "required": {
+        "samples": [
+          "LATENT"
+        ],
+        "vae": [
+          "VAE"
+        ]
+      },
+      "optional": {}
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_node": false
+  },
+  "SaveImage": {
+    "input": {
+      "required": {
+        "images": [
+          "IMAGE"
+        ],
+        "filename_prefix": [
+          "STRING",
+          {}
+        ]
+      },
+      "optional": {}
+    },
+    "output": [],
+    "output_node": true
+  },
+  "FluxKontextMultiReferenceLatentMethod": {
+    "input": {
+      "required": {
+        "conditioning": [
+          "CONDITIONING"
+        ],
+        "reference_latents_method": [
+          [
+            "index_timestep_zero"
+          ]
+        ]
+      },
+      "optional": {}
+    },
+    "output": [
+      "CONDITIONING"
+    ],
+    "output_node": false
+  }
+}

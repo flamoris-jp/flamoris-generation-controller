@@ -7,7 +7,7 @@ from ..comfyui import ComfyUIClient
 from ..image_decode import decode_image
 from ..models import ModelCatalog
 from ..reference_comfy import IMAGE_NODES, ReferenceRecipe
-from ..workflows import Recipe, RegisteredRecipe, WorkflowStore, build_prompt
+from ..workflows import DeclaredRecipe, Recipe, RegisteredRecipe, WorkflowStore, build_prompt
 from .base import (
     GenerationRequest,
     JobSnapshot,
@@ -81,7 +81,7 @@ class ComfyUIProvider:
 
     async def submit(self, request: GenerationRequest, job_id: str) -> ProviderJob:
         if request.operation != "image.generate" or not isinstance(
-            request.payload, (Recipe, RegisteredRecipe, ReferenceRecipe)
+            request.payload, (Recipe, RegisteredRecipe, ReferenceRecipe, DeclaredRecipe)
         ):
             raise SubmissionRejected("ComfyUI supports only retained builtin image recipes")
         try:
@@ -92,12 +92,29 @@ class ComfyUIProvider:
                 prompt["7"]["inputs"]["filename_prefix"] = f"flamoris/{job_id}"
         except ValueError as exc:
             raise SubmissionRejected(str(exc)[:300]) from exc
-        if isinstance(request.payload, ReferenceRecipe) or (
-            isinstance(request.payload, RegisteredRecipe) and request.payload.reference_image
+        output_node = (
+            self.workflows.definitions.output_node(request.payload) if self.workflows else "7"
+        )
+        if isinstance(request.payload, DeclaredRecipe):
+            try:
+                specs = await self.client.object_info(prompt)
+                # Validate before staging/POST; output prefixes are assigned afterwards.
+                checked = self.workflows.definitions.prompt(request.payload)
+                self.workflows.definitions.validate_declared_prompt(
+                    request.payload.definition_id, checked, specs
+                )
+            except (ValueError, TimeoutError) as exc:
+                raise SubmissionRejected(
+                    str(exc)[:300] or "Node specification check timed out"
+                ) from exc
+        if (
+            isinstance(request.payload, (ReferenceRecipe, DeclaredRecipe))
+            and request.payload.images
+            or (isinstance(request.payload, RegisteredRecipe) and request.payload.reference_image)
         ):
             return await self._submit_reference(request.payload, prompt, job_id)
         execution_id = await self.client.submit(prompt, job_id)
-        self._output_nodes[execution_id] = "7"
+        self._output_nodes[execution_id] = output_node
         return ProviderJob(execution_id=execution_id)
 
     async def _submit_reference(self, recipe, prompt, job_id):
@@ -107,11 +124,12 @@ class ComfyUIProvider:
             or not self.input_copies.available()
         ):
             raise SubmissionRejected("Managed reference image storage is not available")
+        output_node = self.workflows.definitions.output_node(recipe) if self.workflows else "7"
         posted = False
         try:
             images = (
                 recipe.images
-                if isinstance(recipe, ReferenceRecipe)
+                if isinstance(recipe, (ReferenceRecipe, DeclaredRecipe))
                 else {"reference_image": recipe.reference_image}
             )
             async with self.managed_inputs.stage(
@@ -129,13 +147,18 @@ class ComfyUIProvider:
                     payload = bytes(data)
                     decode_image(payload, reader.metadata["mime_type"])
                     name = self.input_copies.stage(job_id, payload, reader.metadata["mime_type"])
-                    node = IMAGE_NODES[role] if isinstance(recipe, ReferenceRecipe) else "8"
-                    prompt[node]["inputs"]["image"] = name
+                    if isinstance(recipe, DeclaredRecipe):
+                        declaration = self.workflows.definitions.get(recipe.definition_id)[2]
+                        for target in declaration.parameters[role].targets:
+                            prompt[target.node]["inputs"][target.input] = name
+                    else:
+                        node = IMAGE_NODES[role] if isinstance(recipe, ReferenceRecipe) else "8"
+                        prompt[node]["inputs"]["image"] = name
                     metadata[role] = dict(reader.metadata)
                 self.input_copies.before_post(job_id)
                 posted = True
                 execution_id = await self.client.submit(prompt, job_id)
-                self._output_nodes[execution_id] = "7"
+                self._output_nodes[execution_id] = output_node
                 self.input_copies.bind(job_id, execution_id)
                 return ProviderJob(execution_id, metadata)
 
