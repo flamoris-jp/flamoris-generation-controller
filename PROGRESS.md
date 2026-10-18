@@ -1,5 +1,9 @@
 # Automatic Irodori duration — 2026-10-17
 
+## 2026-10-18 — Controller #26 source implementation
+
+Prepared 1.1.0 declarative image registration: installed `object_info`, explicit binding/constant/output contracts, configured trusted-node policy, immutable schema-10 recipes, and existing managed-input/Job/Asset authority. Qwen topology, renumbering, another graph family, rejection paths, uncertain POST/restart and output restoration are covered by fake-provider tests. Local Controller suite: 419 passed; Ruff/format and sdist/wheel build passed. Matched MCP/Studio/Hub PRs and CI are tracked in #26. Live deployment, new-path GPU generation and visual quality acceptance remain pending; no data conversion or deletion. See [contract and rollout](docs/DECLARED_COMFY.md).
+
 Source 1.0.7 makes omitted/null seconds automatic in reference and no-reference
 speech. HTTP omits manual seconds while retaining estimation bounds; CLI omits
 --seconds. Explicit numeric/retained recipes keep fixed duration. Nullable

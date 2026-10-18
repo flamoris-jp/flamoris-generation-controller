@@ -143,8 +143,18 @@ class ReferenceRecipe(BaseModel):
         return value
 
 
+class DeclaredRecipe(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+    schema_version: Literal[10] = 10
+    template: Literal["registered-comfy"] = "registered-comfy"
+    definition_id: str = Field(pattern=r"^comfy-[a-f0-9]{64}$")
+    parameters: dict[str, Any] = Field(max_length=64)
+    images: dict[str, str] = Field(default_factory=dict, max_length=4)
+
+
 AnyRecipe = (
-    Recipe
+    DeclaredRecipe
+    | Recipe
     | RegisteredRecipe
     | ReferenceRecipe
     | ReferenceSpeechRecipe
@@ -334,6 +344,7 @@ class WorkflowStore:
         speech_http=False,
         music_enabled=False,
         transcription_enabled=False,
+        declared_comfy_nodes=(),
     ):
         self.catalog = catalog
         self.directory = directory
@@ -344,7 +355,9 @@ class WorkflowStore:
         self.transcription_enabled = transcription_enabled
         from .registered_comfy import ComfyDefinitions
 
-        self.definitions = ComfyDefinitions(directory)
+        self.definitions = ComfyDefinitions(
+            directory, catalog=catalog, allowed_nodes=declared_comfy_nodes
+        )
 
     def build(
         self,
@@ -443,6 +456,8 @@ class WorkflowStore:
             raise ValueError("Invalid recipe schema")
         if schema in (2, 3):
             raise RetiredRecipeError("Custom ComfyWorkFlow recipe execution is retired")
+        if schema == 10:
+            return DeclaredRecipe.model_validate(data)
         if schema == 7:
             return RegisteredRecipe.model_validate(data)
         if schema == 8:
@@ -471,13 +486,15 @@ class WorkflowStore:
             }[type(recipe)]
             if not enabled:
                 raise ValueError("Native recipe is disabled")
-        elif not isinstance(recipe, (Recipe, RegisteredRecipe, ReferenceRecipe)):
+        elif not isinstance(recipe, (Recipe, RegisteredRecipe, ReferenceRecipe, DeclaredRecipe)):
             raise RetiredRecipeError("Custom ComfyWorkFlow recipe execution is retired")
 
     def prompt(self, recipe: AnyRecipe, job_id: str | None = None) -> dict:
         if isinstance(recipe, NATIVE_RECIPES):
             raise ValueError("Native recipe has no ComfyUI prompt")
         self._require_supported_recipe(recipe)
+        if isinstance(recipe, DeclaredRecipe):
+            return self.definitions.prompt(recipe, job_id)
         if isinstance(recipe, (RegisteredRecipe, ReferenceRecipe)):
             self.catalog.require("checkpoint", recipe.parameters.checkpoint)
             if isinstance(recipe, ReferenceRecipe):

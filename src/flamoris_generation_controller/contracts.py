@@ -48,6 +48,7 @@ class Recipe(Request):
 class RegisterComfy(Request):
     name: Annotated[str, Field(min_length=1, max_length=120)]
     graph: dict[str, Any]
+    declaration: dict[str, Any] | None = None
 
 
 class GetComfy(Request):

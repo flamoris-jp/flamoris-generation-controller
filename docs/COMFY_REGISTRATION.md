@@ -1,5 +1,7 @@
 # ComfyWorkFlow registration and reference-image generation
 
+Controller #26 adds a separate [declarative image contract](DECLARED_COMFY.md). The fixed profiles below remain supported; their restrictions do not apply to declaration-based registrations. New behavior requires matched 1.1.0 sources and separate live acceptance.
+
 Scope: [Controller #6](https://github.com/flamoris-jp/flamoris-generation-controller/issues/6).
 This is a new Controller-owned bounded profile, distinct from retired schema 2/3
 definitions, versioning, v3 composition and Runtime delegation.

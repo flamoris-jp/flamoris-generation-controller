@@ -83,6 +83,55 @@ class ComfyUIClient:
             raise ProviderError(f"ComfyUI {path} returned an invalid response object")
         return data
 
+    async def object_info(self, graph):
+        import asyncio
+
+        async with asyncio.timeout(self.settings.request_timeout):
+            return await self._object_info(graph)
+
+    async def _object_info(self, graph):
+        import asyncio
+        import json
+
+        if type(graph) is not dict or not 1 <= len(graph) <= 128:
+            raise ValueError("Invalid declared ComfyWorkFlow graph")
+        classes = set()
+        for node in graph.values():
+            if (
+                type(node) is not dict
+                or type(node.get("class_type")) is not str
+                or not 1 <= len(node["class_type"]) <= 128
+            ):
+                raise ValueError("Invalid declared ComfyWorkFlow node class")
+            classes.add(node["class_type"])
+        result = {}
+        # Per-class endpoint avoids fetching the entire installed catalog.
+        for cls in sorted(classes):
+            path = "object_info/" + quote(cls, safe="")
+            try:
+                async with asyncio.timeout(self.settings.request_timeout):
+                    async with self.http.stream("GET", path) as response:
+                        if response.status_code == 404:
+                            raise ValueError(f"ComfyUI node is not installed: {cls}")
+                        response.raise_for_status()
+                        raw = bytearray()
+                        async for part in response.aiter_bytes():
+                            raw.extend(part)
+                            if len(raw) > 256 * 1024:
+                                raise ValueError("ComfyUI node specification exceeds byte limit")
+                data = json.loads(raw)
+            except (httpx.HTTPError, TimeoutError, json.JSONDecodeError):
+                raise ValueError(
+                    f"Cannot read installed ComfyUI node specification: {cls}"
+                ) from None
+            if not isinstance(data, dict) or not isinstance(data.get(cls), dict):
+                raise ValueError(f"ComfyUI node is not installed: {cls}")
+            spec = data[cls]
+            result[cls] = {k: spec[k] for k in ("input", "output", "output_node") if k in spec}
+            if len(json.dumps(result, allow_nan=False).encode()) > 256 * 1024:
+                raise ValueError("ComfyUI graph node specifications exceed byte limit")
+        return result
+
     async def queue(self) -> tuple[set[str], set[str]]:
         data = await self._request("GET", "queue")
         result = []

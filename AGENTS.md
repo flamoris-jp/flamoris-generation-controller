@@ -1,5 +1,9 @@
 # Contributor and AI-agent instructions
 
+## 2026-10-18 Controller #26
+
+The explicit user request authorizes source implementation, matched MCP/Studio/Hub integration, tests, documentation and reviewable PRs for declarative image graphs. It supersedes older fixed-topology/model-family restrictions for this slice. Follow the [declaration contract](docs/DECLARED_COMFY.md). Preserve existing profiles/data, single authority, immutable inputs, ownership and unknown/no-replay. Live deployment, inference and merges remain separate.
+
 This repository is the owner of FLAMORIS generation-domain code. It contains the MCP-free core and optional internal HTTP adapter. Read README.md, docs/ARCHITECTURE.md, docs/IMPLEMENTATION.md, docs/MIGRATION.md, current [AI progress](https://github.com/flamoris-jp/flamoris-ai/blob/main/PROGRESS.md), [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18) and [Controller #1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1).
 
 ## Current task and sequencing

@@ -58,6 +58,7 @@ class Settings(BaseModel):
     transfer_max_bytes: int = Field(default=1024**3, ge=1, le=4 * 1024**3)
     transfer_disk_bytes: int = Field(default=8 * 1024**3, ge=1, le=64 * 1024**3)
     targeted_interrupt: bool = False
+    declared_comfy_nodes: list[str] = Field(default_factory=list, max_length=256)
     irodori_config: Path | None = None
     irodori_url: HttpUrl | None = None
     irodori_model: str = Field(default="irodori-tts", min_length=1, max_length=128)
@@ -133,6 +134,8 @@ class Settings(BaseModel):
             for suffix, field in cls.env_fields.items()
             if "FLAMORIS_" + suffix in os.environ
         }
+        if "FLAMORIS_DECLARED_COMFY_NODES" in os.environ:
+            values["declared_comfy_nodes"] = json.loads(os.environ["FLAMORIS_DECLARED_COMFY_NODES"])
         if "FLAMORIS_MODEL_DIRS" in os.environ:
             values["model_dirs"] = json.loads(os.environ["FLAMORIS_MODEL_DIRS"])
         values.update({key: value for key, value in overrides.items() if value is not None})

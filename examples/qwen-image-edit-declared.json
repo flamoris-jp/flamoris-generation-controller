@@ -1,0 +1,368 @@
+{
+  "name": "Qwen Image Edit (declared)",
+  "graph": {
+    "1": {
+      "class_type": "UnetLoaderGGUF",
+      "inputs": {
+        "unet_name": "qwen-image-edit-2511-Q4_K_M.gguf"
+      }
+    },
+    "2": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+        "type": "qwen_image",
+        "device": "default"
+      }
+    },
+    "3": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "qwen_image_vae.safetensors"
+      }
+    },
+    "4": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "$reference_image"
+      }
+    },
+    "5": {
+      "class_type": "TextEncodeQwenImageEditPlus",
+      "inputs": {
+        "clip": [
+          "2",
+          0
+        ],
+        "vae": [
+          "3",
+          0
+        ],
+        "image1": [
+          "4",
+          0
+        ],
+        "prompt": "Give the character a gentle, subtle smile. Keep the same person, face, blonde hair, outfit, pose, background and art style. Change only the facial expression."
+      }
+    },
+    "6": {
+      "class_type": "TextEncodeQwenImageEditPlus",
+      "inputs": {
+        "clip": [
+          "2",
+          0
+        ],
+        "vae": [
+          "3",
+          0
+        ],
+        "image1": [
+          "4",
+          0
+        ],
+        "prompt": ""
+      }
+    },
+    "7": {
+      "class_type": "ModelSamplingAuraFlow",
+      "inputs": {
+        "model": [
+          "1",
+          0
+        ],
+        "shift": 3.1
+      }
+    },
+    "8": {
+      "class_type": "EmptySD3LatentImage",
+      "inputs": {
+        "width": 416,
+        "height": 512,
+        "batch_size": 1
+      }
+    },
+    "9": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "7",
+          0
+        ],
+        "seed": 20261018,
+        "steps": 20,
+        "cfg": 4.0,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "positive": [
+          "12",
+          0
+        ],
+        "negative": [
+          "13",
+          0
+        ],
+        "latent_image": [
+          "8",
+          0
+        ],
+        "denoise": 1.0
+      }
+    },
+    "10": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "9",
+          0
+        ],
+        "vae": [
+          "3",
+          0
+        ]
+      }
+    },
+    "11": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "10",
+          0
+        ],
+        "filename_prefix": "flamoris"
+      }
+    },
+    "12": {
+      "class_type": "FluxKontextMultiReferenceLatentMethod",
+      "inputs": {
+        "conditioning": [
+          "5",
+          0
+        ],
+        "reference_latents_method": "index_timestep_zero"
+      }
+    },
+    "13": {
+      "class_type": "FluxKontextMultiReferenceLatentMethod",
+      "inputs": {
+        "conditioning": [
+          "6",
+          0
+        ],
+        "reference_latents_method": "index_timestep_zero"
+      }
+    }
+  },
+  "declaration": {
+    "version": 1,
+    "parameters": {
+      "reference_image": {
+        "type": "string",
+        "role": "managed_input",
+        "label": "Image to edit",
+        "targets": [
+          {
+            "node": "4",
+            "input": "image"
+          }
+        ],
+        "required": true
+      },
+      "instruction": {
+        "type": "string",
+        "role": "prompt",
+        "label": "Edit instruction",
+        "targets": [
+          {
+            "node": "5",
+            "input": "prompt"
+          }
+        ],
+        "default": "Give the character a gentle, subtle smile. Keep the same person, face, blonde hair, outfit, pose, background and art style. Change only the facial expression.",
+        "min_length": 1
+      },
+      "negative": {
+        "type": "string",
+        "role": "prompt",
+        "label": "Negative instruction",
+        "targets": [
+          {
+            "node": "6",
+            "input": "prompt"
+          }
+        ],
+        "default": ""
+      },
+      "diffusion_model": {
+        "type": "string",
+        "role": "model",
+        "label": "Diffusion Model",
+        "targets": [
+          {
+            "node": "1",
+            "input": "unet_name"
+          }
+        ],
+        "default": "qwen-image-edit-2511-Q4_K_M.gguf",
+        "model_kind": "unet"
+      },
+      "encoder": {
+        "type": "string",
+        "role": "model",
+        "label": "Encoder",
+        "targets": [
+          {
+            "node": "2",
+            "input": "clip_name"
+          }
+        ],
+        "default": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+        "model_kind": "text_encoder"
+      },
+      "vae": {
+        "type": "string",
+        "role": "model",
+        "label": "Vae",
+        "targets": [
+          {
+            "node": "3",
+            "input": "vae_name"
+          }
+        ],
+        "default": "qwen_image_vae.safetensors",
+        "model_kind": "vae"
+      },
+      "steps": {
+        "type": "integer",
+        "role": "parameter",
+        "label": "Steps",
+        "targets": [
+          {
+            "node": "9",
+            "input": "steps"
+          }
+        ],
+        "default": 20,
+        "minimum": 1,
+        "maximum": 150
+      },
+      "cfg": {
+        "type": "number",
+        "role": "parameter",
+        "label": "Cfg",
+        "targets": [
+          {
+            "node": "9",
+            "input": "cfg"
+          }
+        ],
+        "default": 4.0,
+        "minimum": 0,
+        "maximum": 100
+      },
+      "seed": {
+        "type": "integer",
+        "role": "parameter",
+        "label": "Seed",
+        "targets": [
+          {
+            "node": "9",
+            "input": "seed"
+          }
+        ],
+        "default": 20261018,
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "width": {
+        "type": "integer",
+        "role": "parameter",
+        "label": "Width",
+        "targets": [
+          {
+            "node": "8",
+            "input": "width"
+          }
+        ],
+        "default": 416,
+        "minimum": 64,
+        "maximum": 2048
+      },
+      "height": {
+        "type": "integer",
+        "role": "parameter",
+        "label": "Height",
+        "targets": [
+          {
+            "node": "8",
+            "input": "height"
+          }
+        ],
+        "default": 512,
+        "minimum": 64,
+        "maximum": 2048
+      },
+      "shift": {
+        "type": "number",
+        "role": "parameter",
+        "label": "Shift",
+        "targets": [
+          {
+            "node": "7",
+            "input": "shift"
+          }
+        ],
+        "default": 3.1,
+        "minimum": 0,
+        "maximum": 100
+      },
+      "denoise": {
+        "type": "number",
+        "role": "parameter",
+        "label": "Denoise",
+        "targets": [
+          {
+            "node": "9",
+            "input": "denoise"
+          }
+        ],
+        "default": 1.0,
+        "minimum": 0,
+        "maximum": 1
+      }
+    },
+    "constants": [
+      {
+        "node": "2",
+        "input": "type"
+      },
+      {
+        "node": "2",
+        "input": "device"
+      },
+      {
+        "node": "8",
+        "input": "batch_size"
+      },
+      {
+        "node": "9",
+        "input": "sampler_name"
+      },
+      {
+        "node": "9",
+        "input": "scheduler"
+      },
+      {
+        "node": "12",
+        "input": "reference_latents_method"
+      },
+      {
+        "node": "13",
+        "input": "reference_latents_method"
+      }
+    ],
+    "output": {
+      "node": "11",
+      "prefix_input": "filename_prefix"
+    }
+  }
+}

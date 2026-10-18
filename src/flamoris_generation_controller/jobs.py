@@ -139,7 +139,9 @@ class JobStore:
                 else None,
             )
             if job.provider_execution_id and hasattr(provider, "_output_nodes"):
-                provider._output_nodes[job.provider_execution_id] = "7"
+                provider._output_nodes[job.provider_execution_id] = (
+                    self.workflows.definitions.output_node(recipe)
+                )
             self._jobs[job_id] = job
             self._active_job_id = job_id
         except (KeyError, TypeError, ValueError) as exc:
