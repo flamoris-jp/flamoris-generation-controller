@@ -124,3 +124,7 @@ images, unknown/no-replay, restart output identity, Studio field rendering and
 owned input/result boundaries. Live deployment and the new end-to-end Qwen GPU
 run/visual review are **pending**. The prior direct ComfyUI smoke success does
 not certify this new path or general identity/quality stability.
+
+## ComfyUI V3 static choices (1.1.1)
+
+Static `COMBO` inputs use the installed `options` list just like legacy choice lists. Constants and declared parameters are validated at registration and execution; saved records retain the original node specification and digest. Remote, dynamic and multiselect choices remain unsupported. This fixes the Qwen reference-method registration failure observed during #26 live acceptance.

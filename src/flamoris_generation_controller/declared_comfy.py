@@ -82,14 +82,34 @@ def scalar(value, spec, *, name):
     return value
 
 
+def widget_definition(definition):
+    """Read legacy choices and V3 static COMBO choices without widening types."""
+    kind = definition[0]
+    options = definition[1] if len(definition) == 2 else {}
+    if type(options) is not dict:
+        raise ValueError("Invalid installed node input options")
+    if kind == "COMBO":
+        choices = options.get("options")
+        if (
+            type(choices) is not list
+            or not choices
+            or options.get("multiselect", False) is not False
+            or "multi_select" in options
+            or options.get("remote") is not None
+            or any(type(v) not in (str, int) for v in choices)
+        ):
+            raise ValueError("Unsupported installed COMBO choices")
+        kind = choices
+    return kind, options
+
+
 def widget(value, definition, *, where, placeholder=False):
     """Fail closed for unsupported dynamic/custom widget schemas."""
     if not isinstance(definition, list) or not 1 <= len(definition) <= 2:
         raise ValueError(f"{where}: unsupported node input specification")
     if type(value) is int and abs(value) > 2**64 - 1:
         raise ValueError(f"{where}: integer exceeds supported range")
-    kind = definition[0]
-    options = definition[1] if len(definition) == 2 else {}
+    kind, options = widget_definition(definition)
     if not isinstance(options, dict):
         raise ValueError(f"{where}: invalid node input options")
     if isinstance(kind, list):
@@ -133,7 +153,7 @@ def validate(graph, declaration, node_specs, allowed_nodes):
             ):
                 raise ValueError("Unsupported installed ComfyUI input specification")
             for definition in fields.values():
-                kind = definition[0]
+                kind, _ = widget_definition(definition)
                 if type(kind) not in (str, list):
                     raise ValueError("Unsupported installed ComfyUI input type")
                 options = definition[1] if len(definition) == 2 else {}
@@ -214,7 +234,7 @@ def validate(graph, declaration, node_specs, allowed_nodes):
             definition = fields.get(target.input)
             if not definition:
                 raise ValueError(f"Parameter {name}: missing node input target")
-            kind, options = definition[0], definition[1] if len(definition) == 2 else {}
+            kind, options = widget_definition(definition)
             if isinstance(kind, list) and spec.role != "managed_input":
                 choices = kind if spec.enum is None else [v for v in spec.enum if v in kind]
                 if not choices or len(choices) > 512:

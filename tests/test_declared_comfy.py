@@ -31,6 +31,63 @@ def specs():
     return json.loads((HERE / "fixtures/qwen-object-info.json").read_text())
 
 
+def test_v3_combo_constants_and_parameter_survive_saved_recipe(declared):
+    settings, body, info = declared
+    info["FluxKontextMultiReferenceLatentMethod"]["input"]["required"][
+        "reference_latents_method"
+    ] = ["COMBO", {"options": ["offset", "index_timestep_zero"], "multiselect": False}]
+    original = deepcopy(info)
+    body["declaration"]["constants"] = [
+        t for t in body["declaration"]["constants"] if t["node"] != "12"
+    ]
+    body["declaration"]["parameters"]["reference_method"] = {
+        "type": "string",
+        "role": "parameter",
+        "label": "Reference method",
+        "default": "index_timestep_zero",
+        "targets": [{"node": "12", "input": "reference_latents_method"}],
+    }
+    store = WorkflowStore(
+        ModelCatalog(settings), settings.workflow_dir, declared_comfy_nodes=list(info)
+    )
+    definition = store.definitions.register(**body, node_specs=info)
+    assert info == original
+    assert definition["parameters"]["reference_method"]["enum"] == ["offset", "index_timestep_zero"]
+    built = store.build(definition["id"], {"reference_image": "a" * 32})
+    store.save(built["workflow_id"])
+    fresh = WorkflowStore(
+        ModelCatalog(settings), settings.workflow_dir, declared_comfy_nodes=list(info)
+    )
+    assert fresh.prompt(fresh.get(built["workflow_id"])) == built["prompt"]
+    with pytest.raises(ValueError):
+        store.build(definition["id"], {"reference_image": "a" * 32, "reference_method": "bad"})
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {},
+        {"options": []},
+        {"options": "dynamic"},
+        {"options": [None]},
+        {"options": ["index_timestep_zero"], "multiselect": True},
+        {"options": ["index_timestep_zero"], "remote": {"route": "/choices"}},
+        {"options": ["index_timestep_zero"], "multi_select": {}},
+        {"options": ["other"]},
+    ],
+)
+def test_v3_combo_rejects_unsupported_or_unavailable_choices(declared, options):
+    settings, body, info = declared
+    info["FluxKontextMultiReferenceLatentMethod"]["input"]["required"][
+        "reference_latents_method"
+    ] = ["COMBO", options]
+    store = WorkflowStore(
+        ModelCatalog(settings), settings.workflow_dir, declared_comfy_nodes=list(info)
+    )
+    with pytest.raises(ValueError):
+        store.definitions.register(**body, node_specs=info)
+
+
 @pytest.fixture
 def declared(tmp_path):
     info = specs()
