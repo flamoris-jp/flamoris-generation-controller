@@ -1,3 +1,7 @@
+# 2026-10-19 — Controller #26 live COMBO compatibility
+
+Live registration found that ComfyUI V3 reports the reference-method widget as COMBO/options rather than a legacy choice list. Version 1.1.1 accepts static single choices using the installed options; rejects remote/dynamic/multiselect choices and unavailable values. Regression coverage includes constants, parameter metadata, saved recipe reload and unchanged raw specs. Live GPU and Studio acceptance remain pending.
+
 # Automatic Irodori duration — 2026-10-17
 
 ## 2026-10-18 — Controller #26 source implementation
