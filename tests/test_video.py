@@ -4,6 +4,8 @@ import base64
 import hashlib
 import io
 import json
+from copy import deepcopy
+from pathlib import Path
 from uuid import uuid4
 
 import av
@@ -166,6 +168,108 @@ def settings_for(tmp_path, info):
         comfyui_input_root=shared,
         declared_comfy_nodes=list(info),
     )
+
+
+def native_video_fixture():
+    body, info = fixture()
+    native = json.loads((Path(__file__).parent / "fixtures/native-video-v3.json").read_text())
+    info.update(native["node_specs"])
+    output = body["graph"]["6"]["inputs"]
+    output["format.codec"] = output.pop("codec")
+    body["declaration"]["constants"][-1]["input"] = "format.codec"
+    return body, info
+
+
+def test_installed_native_dynamic_video_schema_roundtrip(tmp_path):
+    body, info = native_video_fixture()
+    original = deepcopy(info)
+    settings = settings_for(tmp_path, info)
+    store = WorkflowStore(
+        ModelCatalog(settings), settings.workflow_dir, declared_comfy_nodes=list(info)
+    )
+    item = store.definitions.register(**body, node_specs=info)
+    built = store.build(item["id"], {"start_image": "a" * 32})
+    output = built["prompt"]["6"]["inputs"]
+    assert output["format"] == "mp4" and output["format.codec"] == "h264"
+    assert "codec" not in output
+    assert info == original  # Never alter the installed schema receipt.
+    store.save(built["workflow_id"])
+    fresh = WorkflowStore(
+        ModelCatalog(settings), settings.workflow_dir, declared_comfy_nodes=list(info)
+    )
+    assert fresh.prompt(fresh.get(built["workflow_id"])) == built["prompt"]
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "legacy_codec",
+        "missing_codec",
+        "wrong_codec",
+        "nested_format",
+        "encoding",
+        "parameter_format",
+        "parameter_codec",
+        "missing_mp4",
+        "missing_h264",
+        "duplicate_choice",
+        "required_format_input",
+        "required_codec_input",
+        "malformed_inputs",
+        "image_declaration",
+    ],
+)
+def test_dynamic_video_support_stays_fixed_and_checks_installed_branch(tmp_path, bad):
+    body, info = native_video_fixture()
+    output = body["graph"]["6"]["inputs"]
+    declaration = body["declaration"]
+    fmt = info["SaveVideo"]["input"]["required"]["format"][1]["options"]
+    mp4_branch = next(choice for choice in fmt if choice["key"] == "mp4")
+    codecs = mp4_branch["inputs"]["required"]["codec"][1]["options"]
+    h264_branch = next(choice for choice in codecs if choice["key"] == "h264")
+    if bad == "legacy_codec":
+        output["codec"] = output.pop("format.codec")
+    elif bad == "missing_codec":
+        del output["format.codec"]
+    elif bad == "wrong_codec":
+        output["format.codec"] = "av1"
+    elif bad == "nested_format":
+        output["format"] = {"format": "mp4", "codec": {"codec": "h264"}}
+    elif bad == "encoding":
+        output["format.codec.encoding"] = "auto"
+        declaration["constants"].append({"node": "6", "input": "format.codec.encoding"})
+    elif bad in {"parameter_format", "parameter_codec"}:
+        key = "format" if bad == "parameter_format" else "format.codec"
+        target = {"node": "6", "input": key}
+        declaration["constants"].remove(target)
+        declaration["parameters"]["container_choice"] = {
+            "type": "string",
+            "role": "parameter",
+            "label": "Choice",
+            "targets": [target],
+            "default": output[key],
+        }
+    elif bad == "missing_mp4":
+        fmt.remove(mp4_branch)
+    elif bad == "missing_h264":
+        codecs.remove(h264_branch)
+    elif bad == "duplicate_choice":
+        fmt.append(deepcopy(mp4_branch))
+    elif bad == "required_format_input":
+        mp4_branch["inputs"]["required"]["new_input"] = ["STRING"]
+    elif bad == "required_codec_input":
+        h264_branch["inputs"]["required"]["new_input"] = ["STRING"]
+    elif bad == "malformed_inputs":
+        mp4_branch["inputs"] = {"required": []}
+    elif bad == "image_declaration":
+        declaration["version"] = 1
+        del declaration["video"]
+    settings = settings_for(tmp_path, info)
+    store = WorkflowStore(
+        ModelCatalog(settings), settings.workflow_dir, declared_comfy_nodes=list(info)
+    )
+    with pytest.raises(ValueError):
+        store.definitions.register(**body, node_specs=info)
 
 
 def mp4(*, frames=5, fps=16):

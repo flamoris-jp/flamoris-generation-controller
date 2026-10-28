@@ -2,6 +2,7 @@
 
 import io
 import re
+from copy import deepcopy
 from typing import Literal
 
 from pydantic import Field
@@ -25,6 +26,76 @@ def parse_declaration(value):
     if type(value) is dict and value.get("version") == 2:
         return VideoDeclaration.model_validate(value)
     return Declaration.model_validate(value)
+
+
+def _selected_video_inputs(definition, choice):
+    """Inspect only the selected installed native DynamicCombo branch."""
+    if (
+        type(definition) is not list
+        or len(definition) != 2
+        or definition[0] != "COMFY_DYNAMICCOMBO_V3"
+        or type(definition[1]) is not dict
+        or type(definition[1].get("options")) is not list
+        or not 1 <= len(definition[1]["options"]) <= 64
+    ):
+        raise ValueError("Unsupported installed SaveVideo dynamic specification")
+    options = definition[1]["options"]
+    if any(type(option) is not dict or type(option.get("key")) is not str for option in options):
+        raise ValueError("Unsupported installed SaveVideo dynamic choices")
+    if len({option["key"] for option in options}) != len(options):
+        raise ValueError("Duplicate installed SaveVideo dynamic choices")
+    selected = next((option for option in options if option["key"] == choice), None)
+    if selected is None:
+        raise ValueError("Required MP4/H.264 SaveVideo choice is not installed")
+    fields = selected.get("inputs")
+    if (
+        type(fields) is not dict
+        or set(fields) - {"required", "optional"}
+        or any(type(value) is not dict for value in fields.values())
+    ):
+        raise ValueError("Unsupported installed SaveVideo dynamic inputs")
+    return fields
+
+
+def video_node_specs(graph, decl, node_specs):
+    """Support the fixed native MP4/H.264 branch, not general dynamic graphs.
+
+    ComfyUI API prompts use flat dotted keys. ComfyUI itself assembles those
+    widgets into nested execution arguments. Keep the original graph/payload;
+    narrow the installed specification solely for validation of this branch.
+    """
+    source = node_specs["SaveVideo"]
+    groups = source.get("input", {})
+    required = groups.get("required", {})
+    definition = required.get("format", [])
+    if not definition or definition[0] != "COMFY_DYNAMICCOMBO_V3":
+        return node_specs
+    format_fields = _selected_video_inputs(definition, "mp4")
+    if set(format_fields.get("required", {})) != {"codec"}:
+        raise ValueError("Unsupported installed SaveVideo MP4 inputs")
+    codec_fields = _selected_video_inputs(format_fields["required"]["codec"], "h264")
+    if codec_fields.get("required"):
+        raise ValueError("Unsupported installed SaveVideo H.264 inputs")
+    inputs = graph[decl.output.node]["inputs"]
+    constants = {(target.node, target.input) for target in decl.constants}
+    if (
+        inputs.get("format") != "mp4"
+        or inputs.get("format.codec") != "h264"
+        or not {(decl.output.node, "format"), (decl.output.node, "format.codec")} <= constants
+    ):
+        raise ValueError("Dynamic SaveVideo requires constant format=mp4 and format.codec=h264")
+    # Optional encoding branches remain omitted; no arbitrary dotted key,
+    # dynamic connection, hidden legacy codec or nested JSON is made available.
+    adapted = deepcopy(source)
+    adapted["input"]["required"] = {
+        **required,
+        "format": [["mp4"]],
+        "format.codec": [["h264"]],
+    }
+    adapted["input"]["optional"] = {
+        key: value for key, value in groups.get("optional", {}).items() if key != "codec"
+    }
+    return {**node_specs, "SaveVideo": adapted}
 
 
 def validate_video(graph, decl):
@@ -72,7 +143,7 @@ def validate_video(graph, decl):
     if (
         output.get("video") != [creator_id, 0]
         or output.get("format") != "mp4"
-        or output.get("codec") != "h264"
+        or output.get("format.codec", output.get("codec")) != "h264"
     ):
         raise ValueError("Video requires a fixed MP4/H.264 SaveVideo output")
     # These semantic parameters must drive the actual graph widgets. A label or

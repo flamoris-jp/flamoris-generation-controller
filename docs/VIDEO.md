@@ -2,7 +2,7 @@
 
 Owner: [Controller #31](https://github.com/flamoris-jp/flamoris-generation-controller/issues/31),
 resumed from [Generation #25](https://github.com/flamoris-jp/flamoris-generation-mcp/issues/25).
-**1.2.0 candidate source; production graph and real GPU acceptance pending.**
+**1.2.1 adds installed native SaveVideo V3 compatibility; real GPU acceptance pending.**
 
 `video.generate` uses the existing ComfyUI provider and the same JobStore,
 input leases, reservation journal and asset store as Image/Speech/Music. There
@@ -51,11 +51,18 @@ All other widgets, links, models, constants and output bindings follow the
 existing strict declaration and operator-node allowlist. Model/LoRA filenames
 must come from installed catalogs; this package invents none.
 
-The first profile deliberately requires direct image links and static scalar
-widgets. Resizing chains, VHS output nodes and V3 dynamic nested COMBO widgets
-are not silently translated. If the installed successful graph uses one of
-these contracts, capture it and extend/test the contract before registration;
-do not replace the successful graph with a guessed equivalent.
+The profile requires direct image links and static scalar widgets. In 1.2.1,
+installed native `SaveVideo` V3 dynamic metadata additionally supports exactly
+the MP4/H.264 branch: API prompt inputs are flat `"format": "mp4"` and
+`"format.codec": "h264"`, both declared constants. ComfyUI assembles these into
+nested execution arguments; Controller retains the flat prompt unchanged.
+The installed MP4 and H.264 branches must exist and must not introduce additional
+required inputs. Optional encoding/CRF branches, the hidden legacy `codec`,
+other dotted keys, nested JSON values and parameterized choices are rejected.
+Legacy static `format` / `codec` graphs keep their original representation,
+identities and validation. This exception applies only to declaration v2 video
+output; it does not enable general dynamic widgets for image declarations.
+Resizing chains, VHS outputs and other dynamic contracts remain unsupported.
 
 Both modes have distinct immutable definition IDs and content digests. A
 build with an unexpected `end_image`, or a FLF2V build without it, fails.
@@ -129,17 +136,23 @@ copied into this repository.
 
 ## Real-machine acceptance still required
 
-The inspected live authority reports Generation MCP 1.1.1, idle; ComfyUI OFF and
-Irodori READY. The Kachinco project contains `red-shoes.webp`; it was read without
-editing. Available connectors cannot export saved ComfyUI graphs, read arbitrary
-provider files or change operator configuration. The model catalog shows AnimeGen high/low LoRAs, Wan VAE and UMT5, but its
-diffusion-model list is empty and its UNet list contains only Qwen. This does
-not prove the host lacks AnimeGen weights; the ComfyUI model roots/mounts must
-be reconciled with Generation discovery. The actual successful AnimeGen
-API-format export/history fixture and launch flags were not obtained. Therefore
-no runtime was switched and no AnimeGen generation, MP4 retrieval or VRAM
-comparison has been performed. Source tests with tiny encoded fixtures are not
-these acceptance receipts.
+Generation MCP / Controller 1.2.0 were released and deployed. The subsequent
+read-only operator preflight confirms installed Wan I2V nodes and the native
+V3 SaveVideo schema at ComfyUI revision
+`c194dd00cd42aa18d9dbf27d977bf6b85d9ea565`. Both FP8 weights are present on the
+host, but the operator node policy excludes required video classes and the
+model links resolve outside the Generation model mount. These need deliberate
+operator configuration; Controller confinement must not be weakened. Version
+1.2.0 did not support that installed SaveVideo schema. The V3 metadata fixture
+in this repository contains only native node schemas, with no host paths or
+production media. It verifies registration compatibility, not GPU inference.
+
+A new minimal graph candidate was reconstructed from pinned public AnimeGen
+FP8 distributor material because the old successful export was unavailable.
+It remains unqualified until installed validation, managed image staging,
+actual GPU execution, verified MP4 retrieval and visual review succeed. No
+AnimeGen job has been submitted. Static/fake-provider tests are not live
+acceptance receipts. The Kachinco project remains unchanged.
 
 Phase 1 uses the actual FP8 high/low model and four-step Lightning graph after
 checking installed identities, licenses and `--disable-pinned-memory`. Inspect
@@ -174,5 +187,5 @@ the next start image. That additional output/extraction operation is not
 implemented here. Keep video/frame asset identity, digest, source job and
 frame index together; never accept an arbitrary provider path as the next frame.
 
-No Kachinco project mutation, Studio Video editor, production graph installation,
-merge or live-deployment receipt is included in this source candidate.
+This compatibility change does not implement a Studio Video editor or claim
+production graph qualification, actual video generation or Kachinco mutation.
