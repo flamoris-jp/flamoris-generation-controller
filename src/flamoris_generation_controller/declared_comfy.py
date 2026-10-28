@@ -202,6 +202,10 @@ def validate(graph, declaration, node_specs, allowed_nodes):
     output_class = "SaveVideo" if video else "SaveImage"
     if output.node not in normalized or normalized[output.node]["class_type"] != output_class:
         raise ValueError(f"Output must declare one {output_class} node")
+    if video:
+        from .video import video_node_specs
+
+        node_specs = video_node_specs(normalized, decl, node_specs)
     covered = {(output.node, output.prefix_input): "output"}
     if sum(spec.role == "managed_input" for spec in decl.parameters.values()) > 4:
         raise ValueError("At most four managed images are supported per job")
