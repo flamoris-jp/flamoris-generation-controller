@@ -38,7 +38,7 @@ def identity(info) -> dict:
 
 def checked_filename(job_id: str, name: str) -> str:
     if not re.fullmatch(r"[a-f0-9]{32}", job_id) or not re.fullmatch(
-        re.escape(job_id) + r"_[0-9]+_\.(png|jpg|jpeg|webp)", name
+        re.escape(job_id) + r"_[0-9]+_\.(png|jpg|jpeg|webp|mp4)", name
     ):
         raise ValueError("Output is not in the managed ComfyUI filename namespace")
     return name

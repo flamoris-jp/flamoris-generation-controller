@@ -21,7 +21,7 @@ from .providers.base import (
     output_roles,
 )
 from .retention import RetentionStore
-from .workflows import NATIVE_RECIPES, AnyRecipe, RetiredRecipeError, WorkflowStore, checked_id
+from .workflows import AnyRecipe, RetiredRecipeError, WorkflowStore, checked_id
 
 TERMINAL = {"completed", "failed", "cancelled"}
 
@@ -116,15 +116,8 @@ class JobStore:
                 return
             recipe = self.workflows.parse(recipe_data)
             provider = self.providers.get(raw["provider_id"])
-            if isinstance(recipe, NATIVE_RECIPES) and (
-                (raw["provider_id"], raw["operation"]) != self.workflows.routing(recipe)
-            ):
-                raise ValueError("Invalid native reservation route")
-            if not isinstance(recipe, NATIVE_RECIPES) and (
-                raw["provider_id"],
-                raw["operation"],
-            ) != ("comfyui", "image.generate"):
-                raise ValueError("Invalid builtin reservation route")
+            if (raw["provider_id"], raw["operation"]) != self.workflows.routing(recipe):
+                raise ValueError("Invalid reservation route")
             job = Job(
                 job_id,
                 workflow_id,
@@ -142,6 +135,8 @@ class JobStore:
                 provider._output_nodes[job.provider_execution_id] = (
                     self.workflows.definitions.output_node(recipe)
                 )
+            if job.provider_execution_id and hasattr(provider, "restore_video"):
+                provider.restore_video(recipe, job_id, job.provider_execution_id)
             self._jobs[job_id] = job
             self._active_job_id = job_id
         except (KeyError, TypeError, ValueError) as exc:

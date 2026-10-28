@@ -131,7 +131,9 @@ def widget(value, definition, *, where, placeholder=False):
 
 
 def validate(graph, declaration, node_specs, allowed_nodes):
-    decl = Declaration.model_validate(declaration)
+    from .video import parse_declaration
+
+    decl = parse_declaration(declaration)
     if type(node_specs) is not dict:
         raise ValueError("Installed ComfyUI node specifications are required")
     for schema in node_specs.values():
@@ -196,8 +198,10 @@ def validate(graph, declaration, node_specs, allowed_nodes):
             raise ValueError(f"Node {node_id} ({cls[:120]}): node is not installed")
         normalized[node_id] = {"class_type": cls, "inputs": deepcopy(node["inputs"])}
     output = decl.output
-    if output.node not in normalized or normalized[output.node]["class_type"] != "SaveImage":
-        raise ValueError("Image output must declare one SaveImage node")
+    video = getattr(decl, "video", None)
+    output_class = "SaveVideo" if video else "SaveImage"
+    if output.node not in normalized or normalized[output.node]["class_type"] != output_class:
+        raise ValueError(f"Output must declare one {output_class} node")
     covered = {(output.node, output.prefix_input): "output"}
     if sum(spec.role == "managed_input" for spec in decl.parameters.values()) > 4:
         raise ValueError("At most four managed images are supported per job")
@@ -339,6 +343,10 @@ def validate(graph, declaration, node_specs, allowed_nodes):
     visit(output.node)
     if visited != set(normalized):
         raise ValueError("ComfyWorkFlow contains nodes unreachable from declared image output")
+    if video:
+        from .video import validate_video
+
+        validate_video(normalized, decl)
     return normalized, decl
 
 

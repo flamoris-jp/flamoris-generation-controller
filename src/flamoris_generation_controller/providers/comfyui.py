@@ -1,5 +1,6 @@
 """ComfyUI implementation of the provider-neutral generation contract."""
 
+import asyncio
 import logging
 from pathlib import Path
 
@@ -7,10 +8,19 @@ from ..comfyui import ComfyUIClient
 from ..image_decode import decode_image
 from ..models import ModelCatalog
 from ..reference_comfy import IMAGE_NODES, ReferenceRecipe
-from ..workflows import DeclaredRecipe, Recipe, RegisteredRecipe, WorkflowStore, build_prompt
+from ..video import VIDEO_BYTES, owned_video_output, verify_mp4, video_parameters
+from ..workflows import (
+    DeclaredRecipe,
+    Recipe,
+    RegisteredRecipe,
+    VideoRecipe,
+    WorkflowStore,
+    build_prompt,
+)
 from .base import (
     GenerationRequest,
     JobSnapshot,
+    OutputRole,
     ProviderError,
     ProviderHealth,
     ProviderJob,
@@ -23,6 +33,7 @@ from .comfyui_retention import ComfyUIRetention
 logger = logging.getLogger(__name__)
 
 MEDIA_TYPES = {
+    ".mp4": ("video", "video/mp4"),
     ".png": ("image", "image/png"),
     ".jpg": ("image", "image/jpeg"),
     ".jpeg": ("image", "image/jpeg"),
@@ -66,6 +77,26 @@ class ComfyUIProvider:
         )
         self._outputs: dict[tuple[str, str], dict] = {}
         self._output_nodes: dict[str, str] = {}
+        self._videos: dict[str, tuple[str, dict]] = {}
+
+    def restore_video(self, recipe, job_id, execution_id):
+        """Restore output expectations for acknowledged work, without posting again."""
+        if isinstance(recipe, VideoRecipe):
+            from ..declared_comfy import render, validate
+
+            _name, graph, decl, _reference = self.workflows.definitions.get(recipe.definition_id)
+            prompt = render(graph, decl, {**recipe.parameters, **recipe.images})
+            declaration = decl.model_dump()
+            for spec in declaration["parameters"].values():
+                if spec["role"] != "managed_input":
+                    spec.update(default=None, required=True)
+            validate(
+                prompt,
+                declaration,
+                self.workflows.definitions.declared_specs(recipe.definition_id),
+                {node["class_type"] for node in graph.values()},
+            )
+            self._videos[execution_id] = (job_id, video_parameters(prompt, decl))
 
     def retention(self) -> ComfyUIRetention | None:
         root = self.client.settings.comfyui_output_root
@@ -80,10 +111,13 @@ class ComfyUIProvider:
         )
 
     async def submit(self, request: GenerationRequest, job_id: str) -> ProviderJob:
-        if request.operation != "image.generate" or not isinstance(
+        operation = (
+            "video.generate" if isinstance(request.payload, VideoRecipe) else "image.generate"
+        )
+        if request.operation != operation or not isinstance(
             request.payload, (Recipe, RegisteredRecipe, ReferenceRecipe, DeclaredRecipe)
         ):
-            raise SubmissionRejected("ComfyUI supports only retained builtin image recipes")
+            raise SubmissionRejected("ComfyUI recipe/capability mismatch")
         try:
             if self.workflows is not None:
                 prompt = self.workflows.prompt(request.payload, job_id)
@@ -159,6 +193,9 @@ class ComfyUIProvider:
                 posted = True
                 execution_id = await self.client.submit(prompt, job_id)
                 self._output_nodes[execution_id] = output_node
+                if isinstance(recipe, VideoRecipe):
+                    declaration = self.workflows.definitions.get(recipe.definition_id)[2]
+                    self._videos[execution_id] = (job_id, video_parameters(prompt, declaration))
                 self.input_copies.bind(job_id, execution_id)
                 return ProviderJob(execution_id, metadata)
 
@@ -186,11 +223,20 @@ class ComfyUIProvider:
         selected = [item for item in raw.get("outputs", []) if item.get("node_id") == declared_node]
         if status == "completed" and not selected:
             raise ProviderError("ComfyUI returned no declared recipe output")
+        video = self._videos.get(execution_id)
+        if video and status == "completed" and len(selected) != 1:
+            raise ProviderError("Video returned an unexpected output count")
         for index, item in enumerate(selected):
             try:
                 filename = item["filename"]
                 suffix = Path(filename).suffix.lower()
                 media_kind, mime_type = MEDIA_TYPES[suffix]
+                if video:
+                    owned_video_output(item, video[0])
+                    if suffix != ".mp4":
+                        raise ValueError("Expected MP4")
+                elif media_kind != "image":
+                    raise ValueError("Expected an image output")
             except (KeyError, TypeError, ValueError):
                 raise ProviderError("ComfyUI returned an unsupported output") from None
             output_id = f"{index:03d}"
@@ -200,6 +246,7 @@ class ComfyUIProvider:
                     filename=filename,
                     media_kind=media_kind,
                     mime_type=mime_type,
+                    role=OutputRole("video", "video_clip") if video else None,
                 )
             )
             self._outputs[(execution_id, output_id)] = dict(item)
@@ -263,7 +310,10 @@ class ComfyUIProvider:
             raise ProviderError(
                 "Unknown ComfyUI output; inspect the job before retrieval"
             ) from None
-        return await self.client.download(output)
+        data = await self.client.download(output)
+        if execution_id in self._videos:
+            await self._verify_video(execution_id, data)
+        return data
 
     async def close(self) -> None:
         await self.client.close()
@@ -275,5 +325,24 @@ class ComfyUIProvider:
         if output is None:
             raise ProviderError("Unknown ComfyUI output; inspect before retrieval")
         async with aclosing(self.client.stream_output(output)) as stream:
+            if execution_id not in self._videos:
+                async for chunk in stream:
+                    yield chunk
+                return
+            data = bytearray()
             async for chunk in stream:
-                yield chunk
+                if len(data) + len(chunk) > VIDEO_BYTES:
+                    raise ProviderError("Video exceeds the 64 MiB clip limit")
+                data.extend(chunk)
+        await self._verify_video(execution_id, data)
+        from ..transfers import CHUNK_BYTES
+
+        for offset in range(0, len(data), CHUNK_BYTES):
+            yield bytes(data[offset : offset + CHUNK_BYTES])
+
+    async def _verify_video(self, execution_id, data):
+        try:
+            async with asyncio.timeout(30):
+                await asyncio.to_thread(verify_mp4, data, self._videos[execution_id][1])
+        except (ValueError, TimeoutError):
+            raise ProviderError("MP4 output failed bounded decode/recipe verification") from None

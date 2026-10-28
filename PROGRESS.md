@@ -105,3 +105,11 @@ build succeeded. Normal provider tests use fake HTTP; actual speech quality,
 publication, host update and live reconciliation remain unperformed.
 
 ---
+
+## 2026-10-28 — AnimeGen video candidate (#31)
+
+Added the bounded `video.generate` route to the shared ComfyUI provider, declaration v2 with distinct I2V/FLF2V managed image roles, schema-11 recipes, finite clip budgets and MP4/H.264 decode/recipe verification. Known executions restore expectations across restart; unknown work remains reserved without replay. Existing cancellation, input-copy settlement, output roles, confinement and transfer limits are retained.
+
+Validation: 454 local tests (23 video-specific), Ruff check/format, wheel/sdist build passed. Video tests use synthetic graph contracts and tiny locally encoded media, not AnimeGen. See docs/VIDEO.md for protocol, limits and exact remaining acceptance.
+
+Live inspection: existing Generation 1.1.1 is idle, ComfyUI OFF, Irodori READY. Kachinco contains red-shoes.webp and was not edited. Generation model discovery shows AnimeGen LoRAs but no FP8 diffusion-model/UNet entry. The actual successful production API export, installed output contract and runtime launch flags are unavailable through the exposed connectors. No production graph registered, runtime switched, deployment performed or AnimeGen MP4 generated. I2V and FLF2V live/model/quality/VRAM acceptance stay open; this candidate does not complete #31 or Generation #25.

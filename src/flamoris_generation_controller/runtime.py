@@ -82,6 +82,17 @@ class GenerationController:
                     ),
                 )
             )
+            if {"LoadImage", "CreateVideo", "SaveVideo"} <= set(settings.declared_comfy_nodes) and (
+                {"WanImageToVideo", "WanFirstLastFrameToVideo"} & set(settings.declared_comfy_nodes)
+            ):
+                capabilities.register(
+                    Capability(
+                        capability_id="video.generate",
+                        provider_id="comfyui",
+                        runtime_id="comfyui",
+                        workflow_templates=("registered-video",),
+                    )
+                )
             if settings.irodori_config is not None or settings.irodori_url is not None:
                 providers.register(
                     IrodoriHTTPProvider(

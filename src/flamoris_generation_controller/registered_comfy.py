@@ -209,21 +209,28 @@ class ComfyDefinitions:
                 if spec.role == "managed_input":
                     item.update(mime_types=["image/png", "image/jpeg", "image/webp"])
                 parameters[key] = item
+            video = getattr(defaults, "video", None)
             return {
                 "id": definition_id,
                 "name": name,
                 "kind": "registered-comfy",
-                "metadata_schema_version": 3,
+                "metadata_schema_version": 4 if video else 3,
                 "version": 1,
                 "definition_digest": definition_id[6:],
                 "definition_version": 1,
                 "provider_id": "comfyui",
-                "capability_id": "image.generate",
-                "image": {
-                    "profile": "declared-comfy-v1",
-                    "mode": "declared",
-                    "dimensions": {"mode": "graph"},
-                },
+                "capability_id": "video.generate" if video else "image.generate",
+                **(
+                    {"video": {"profile": "wan-video-v1", **video.model_dump()}}
+                    if video
+                    else {
+                        "image": {
+                            "profile": "declared-comfy-v1",
+                            "mode": "declared",
+                            "dimensions": {"mode": "graph"},
+                        }
+                    }
+                ),
                 "parameters": parameters,
                 "readiness": {
                     "state": "validated",
@@ -311,14 +318,15 @@ class ComfyDefinitions:
     def build(self, definition_id, parameters):
         _name, _graph, defaults, reference = self.get(definition_id)
         from .declared_comfy import Declaration, values
-        from .workflows import DeclaredRecipe
+        from .workflows import DeclaredRecipe, VideoRecipe
 
         if isinstance(defaults, Declaration):
             checked = values(defaults, parameters, self.catalog)
             images = {
                 k: v for k, v in checked.items() if defaults.parameters[k].role == "managed_input"
             }
-            return DeclaredRecipe(
+            recipe_type = VideoRecipe if getattr(defaults, "video", None) else DeclaredRecipe
+            return recipe_type(
                 definition_id=definition_id,
                 parameters={k: v for k, v in checked.items() if k not in images},
                 images=images,
@@ -343,10 +351,12 @@ class ComfyDefinitions:
     def prompt(self, recipe, job_id=None):
         _name, _graph, defaults, reference = self.get(recipe.definition_id)
         from .declared_comfy import Declaration, render, values
-        from .workflows import DeclaredRecipe
+        from .workflows import DeclaredRecipe, VideoRecipe
 
         if isinstance(defaults, Declaration):
-            if not isinstance(recipe, DeclaredRecipe):
+            if not isinstance(recipe, DeclaredRecipe) or (
+                isinstance(recipe, VideoRecipe) != bool(getattr(defaults, "video", None))
+            ):
                 raise ValueError("Declared recipe schema mismatch")
             checked = values(defaults, {**recipe.parameters, **recipe.images}, self.catalog)
             if set(recipe.images) != {
