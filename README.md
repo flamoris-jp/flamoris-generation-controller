@@ -2,6 +2,8 @@
 
 Controller #26 adds [declarative image ComfyWorkFlow registration](docs/DECLARED_COMFY.md) with installed-node validation and descriptor-driven Studio Image controls. Prepared source target: Controller / Generation MCP / Studio 1.1.0 plus the matched Hub catalog; live acceptance remains pending.
 
+[Wan video declarations](docs/VIDEO.md) add a `video.generate` source path with separate I2V/FLF2V contracts and verified bounded MP4 transfer. Production AnimeGen graph registration, deployment and GPU acceptance are pending.
+
 Shared bounded generation processing for Studio and the external Generation MCP facade.
 
 **Status: source implementation, 2026-10-05; live cutover pending.** The retained generation domain is now the MCP-free `flamoris_generation_controller` package. [Generation MCP](https://github.com/flamoris-jp/flamoris-generation-mcp) constructs one Controller and exposes its external MCP tools and authenticated internal HTTP API on the same listener. Studio calls the HTTP API directly. See [Controller #1](https://github.com/flamoris-jp/flamoris-generation-controller/issues/1) and [AI #18](https://github.com/flamoris-jp/flamoris-ai/issues/18) for source acceptance.

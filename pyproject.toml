@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flamoris-generation-controller"
-version = "1.1.1"
+version = "1.2.0"
 description = "Shared bounded generation domain and internal HTTP adapter"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
-dependencies = ["flamoris-update-core[owner] @ https://github.com/flamoris-jp/flamoris-updater/archive/797d6f4e7bd4089e7c162fa50c10a0afae68370a.zip#subdirectory=packages/update-core", "httpx>=0.28,<1", "pydantic>=2.11,<3", "Pillow>=11,<13"]
+dependencies = ["flamoris-update-core[owner] @ https://github.com/flamoris-jp/flamoris-updater/archive/797d6f4e7bd4089e7c162fa50c10a0afae68370a.zip#subdirectory=packages/update-core", "av>=14,<18", "httpx>=0.28,<1", "pydantic>=2.11,<3", "Pillow>=11,<13"]
 
 [project.optional-dependencies]
 http = ["starlette>=0.40,<2"]

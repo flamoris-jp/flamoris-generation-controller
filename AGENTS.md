@@ -1,5 +1,9 @@
 # Contributor and AI-agent instructions
 
+## 2026-10-28 Controller #31
+
+The user explicitly resumes AnimeGen/Wan video integration and short-clip testing. Follow docs/VIDEO.md. Source/test/doc/PR work and the requested live test supersede prior feature holds for this slice. Obtain actual exported production graphs and installed contracts; do not fabricate a validated graph or bypass operator policy. Preserve single authority, managed inputs, scoped cancellation and unknown/no-replay. No merge is requested.
+
 ## 2026-10-18 Controller #26
 
 The explicit user request authorizes source implementation, matched MCP/Studio/Hub integration, tests, documentation and reviewable PRs for declarative image graphs. It supersedes older fixed-topology/model-family restrictions for this slice. Follow the [declaration contract](docs/DECLARED_COMFY.md). Preserve existing profiles/data, single authority, immutable inputs, ownership and unknown/no-replay. Live deployment, inference and merges remain separate.

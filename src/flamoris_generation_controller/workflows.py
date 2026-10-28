@@ -152,8 +152,14 @@ class DeclaredRecipe(BaseModel):
     images: dict[str, str] = Field(default_factory=dict, max_length=4)
 
 
+class VideoRecipe(DeclaredRecipe):
+    schema_version: Literal[11] = 11
+    template: Literal["registered-video"] = "registered-video"
+
+
 AnyRecipe = (
-    DeclaredRecipe
+    VideoRecipe
+    | DeclaredRecipe
     | Recipe
     | RegisteredRecipe
     | ReferenceRecipe
@@ -456,6 +462,8 @@ class WorkflowStore:
             raise ValueError("Invalid recipe schema")
         if schema in (2, 3):
             raise RetiredRecipeError("Custom ComfyWorkFlow recipe execution is retired")
+        if schema == 11:
+            return VideoRecipe.model_validate(data)
         if schema == 10:
             return DeclaredRecipe.model_validate(data)
         if schema == 7:
@@ -519,6 +527,8 @@ class WorkflowStore:
                 MusicRecipe: (MUSIC_PROVIDER, MUSIC_CAPABILITY),
                 TranscriptionRecipe: (TRANSCRIPTION_PROVIDER, TRANSCRIPTION_CAPABILITY),
             }[type(recipe)]
+        if isinstance(recipe, VideoRecipe):
+            return "comfyui", "video.generate"
         return "comfyui", "image.generate"
 
     def save(self, workflow_id: str) -> dict:
