@@ -1,3 +1,7 @@
+# 2026-10-29 — MiniMax H3 comparison
+
+Controller #34: add optional silent H3 declaration version 3 and explicit profile, preserving Wan definitions and existing authority/MP4 verification. Local 482 tests and Ruff pass. Real models, reviewed operator node policy, GPU execution and visual acceptance are still pending. See docs/MINIMAX_H3.md.
+
 # 2026-10-19 — Controller #26 live COMBO compatibility
 
 Live registration found that ComfyUI V3 reports the reference-method widget as COMBO/options rather than a legacy choice list. Version 1.1.1 accepts static single choices using the installed options; rejects remote/dynamic/multiselect choices and unavailable values. Regression coverage includes constants, parameter metadata, saved recipe reload and unchanged raw specs. Live GPU and Studio acceptance remain pending.

@@ -83,7 +83,8 @@ class GenerationController:
                 )
             )
             if {"LoadImage", "CreateVideo", "SaveVideo"} <= set(settings.declared_comfy_nodes) and (
-                {"WanImageToVideo", "WanFirstLastFrameToVideo"} & set(settings.declared_comfy_nodes)
+                {"WanImageToVideo", "WanFirstLastFrameToVideo", "MiniMaxH3ImageToVideo"}
+                & set(settings.declared_comfy_nodes)
             ):
                 capabilities.register(
                     Capability(

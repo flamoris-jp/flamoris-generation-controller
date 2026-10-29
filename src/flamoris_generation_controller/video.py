@@ -1,4 +1,4 @@
-"""Bounded Wan I2V/FLF2V declarations; production graphs come from the operator."""
+"""Bounded Wan and silent MiniMax H3 video declarations."""
 
 import io
 import re
@@ -22,7 +22,18 @@ class VideoDeclaration(Declaration):
     video: VideoContract
 
 
+class H3VideoDeclaration(Declaration):
+    version: Literal[3] = 3
+    video: VideoContract
+
+
+def video_profile(decl):
+    return "minimax-h3-video-v1" if isinstance(decl, H3VideoDeclaration) else "wan-video-v1"
+
+
 def parse_declaration(value):
+    if type(value) is dict and value.get("version") == 3:
+        return H3VideoDeclaration.model_validate(value)
     if type(value) is dict and value.get("version") == 2:
         return VideoDeclaration.model_validate(value)
     return Declaration.model_validate(value)
@@ -105,18 +116,27 @@ def validate_video(graph, decl):
     Trusted node code and a real exported graph still require operator review.
     """
     spec = decl.video
-    expected = "WanImageToVideo" if spec.mode == "i2v" else "WanFirstLastFrameToVideo"
+    h3 = isinstance(decl, H3VideoDeclaration)
+    expected = (
+        "MiniMaxH3ImageToVideo"
+        if h3
+        else "WanImageToVideo"
+        if spec.mode == "i2v"
+        else "WanFirstLastFrameToVideo"
+    )
     condition = graph.get(spec.conditioning_node, {})
     if condition.get("class_type") != expected:
-        raise ValueError("Video mode does not match the declared Wan conditioning node")
-    if (
-        sum(
-            n["class_type"] in {"WanImageToVideo", "WanFirstLastFrameToVideo"}
-            for n in graph.values()
-        )
-        != 1
-    ):
-        raise ValueError("Video requires exactly one Wan conditioning node")
+        raise ValueError("Video mode does not match the declared conditioning node")
+    conditioners = {"WanImageToVideo", "WanFirstLastFrameToVideo"}
+    if h3:
+        conditioners |= {
+            "MiniMaxH3ImageToVideo",
+            "MiniMaxH3ReferenceToVideo",
+            "MiniMaxH3AddGuide",
+            "EmptyMiniMaxH3LatentAV",
+        }
+    if sum(n["class_type"] in conditioners for n in graph.values()) != 1:
+        raise ValueError("Video requires exactly one supported conditioning node")
     roles = {"start_image"} | ({"end_image"} if spec.mode == "flf2v" else set())
     if {k for k, v in decl.parameters.items() if v.role == "managed_input"} != roles:
         raise ValueError("Video mode requires exactly its start/end managed image roles")
@@ -128,17 +148,26 @@ def validate_video(graph, decl):
         if (
             target.input != "image"
             or graph[target.node]["class_type"] != "LoadImage"
-            or condition["inputs"].get(role) != [target.node, 0]
+            or condition["inputs"].get(
+                {"start_image": "first_frame", "end_image": "last_frame"}[role] if h3 else role
+            )
+            != [target.node, 0]
         ):
-            raise ValueError("Video reference must connect directly to its Wan image input")
+            raise ValueError(
+                "Video reference must connect directly to its conditioning image input"
+            )
     if len({decl.parameters[r].targets[0].node for r in roles}) != len(roles):
         raise ValueError("Start and end images must use distinct graph bindings")
-    if condition["inputs"].get("batch_size") != 1:
+    if h3 and spec.mode == "i2v" and "last_frame" in condition["inputs"]:
+        raise ValueError("H3 I2V must not silently condition on a last frame")
+    if not h3 and condition["inputs"].get("batch_size") != 1:
         raise ValueError("Video supports exactly one output sequence")
     creators = [(k, n) for k, n in graph.items() if n["class_type"] == "CreateVideo"]
     if len(creators) != 1:
         raise ValueError("Video requires exactly one CreateVideo node")
     creator_id, _creator = creators[0]
+    if h3:
+        validate_h3_path(graph, decl, _creator)
     output = graph[decl.output.node]["inputs"]
     if (
         output.get("video") != [creator_id, 0]
@@ -152,7 +181,7 @@ def validate_video(graph, decl):
         ("width", spec.conditioning_node, "width", (64, 1024)),
         ("height", spec.conditioning_node, "height", (64, 1024)),
         ("frames", spec.conditioning_node, "length", (5, 161)),
-        ("fps", creator_id, "fps", (1, 32)),
+        ("fps", creator_id, "fps", (24, 24) if h3 else (1, 32)),
     ):
         parameter = decl.parameters.get(key)
         if (
@@ -170,18 +199,64 @@ def validate_video(graph, decl):
     width, height, frames = (condition["inputs"][k] for k in ("width", "height", "length"))
     fps = graph[creator_id]["inputs"]["fps"]
     if (
-        width % 16
-        or height % 16
-        or frames % 4 != 1
+        width % (32 if h3 else 16)
+        or height % (32 if h3 else 16)
+        or (frames % 17 != 5 if h3 else frames % 4 != 1)
+        or (h3 and fps != 24)
         or frames / fps > 10.1
         or width * height > 832 * 832
     ):
-        raise ValueError("Video dimensions/frame count/duration exceed the Wan clip profile")
+        raise ValueError("Video dimensions/frame count/duration exceed the selected clip profile")
     for node in graph.values():
         if node["class_type"] in {"KSampler", "KSamplerAdvanced"}:
             steps = node["inputs"].get("steps")
             if type(steps) is not int or not 1 <= steps <= 50:
                 raise ValueError("Video sampling steps must be bounded to 1–50")
+
+
+def validate_h3_path(graph, decl, creator):
+    """One H3 sequence, bounded native sampler, native video decode, no audio.
+
+    H3's nested AV latent and 17k+5 frames differ from Wan's 4k+1 profile.
+    Deliberately do not admit reference editing, guide chains, resizers, tiled
+    decode or audio output under this initial silent-video contract.
+    """
+
+    def one(cls):
+        items = [(key, node["inputs"]) for key, node in graph.items() if node["class_type"] == cls]
+        if len(items) != 1:
+            raise ValueError(f"H3 requires exactly one {cls}")
+        return items[0]
+
+    if "audio" in creator["inputs"]:
+        raise ValueError("The H3 video profile produces a silent MP4")
+    decode_id, decode = one("VAEDecode")
+    sample_id, sample = one("SamplerCustomAdvanced")
+    guide_id, guide = one("BasicGuider")
+    schedule_id, schedule = one("BasicScheduler")
+    noise_id, _noise = one("RandomNoise")
+    sampler_id, _sampler = one("KSamplerSelect")
+    condition = graph[decl.video.conditioning_node]["inputs"]
+    if (
+        creator["inputs"].get("images") != [decode_id, 0]
+        or decode.get("samples") != [sample_id, 0]
+        or decode.get("vae") != condition.get("vae")
+        or sample.get("latent_image") != [decl.video.conditioning_node, 1]
+        or sample.get("guider") != [guide_id, 0]
+        or sample.get("sigmas") != [schedule_id, 0]
+        or sample.get("noise") != [noise_id, 0]
+        or sample.get("sampler") != [sampler_id, 0]
+        or guide.get("conditioning") != [decl.video.conditioning_node, 0]
+        or guide.get("model") != schedule.get("model")
+        or schedule.get("denoise") != 1.0
+        or type(schedule.get("steps")) is not int
+        or not 1 <= schedule["steps"] <= 50
+        or any(
+            n["class_type"] in {"KSampler", "KSamplerAdvanced", "VAEDecodeTiled"}
+            for n in graph.values()
+        )
+    ):
+        raise ValueError("H3 requires its direct bounded sampling and native VAEDecode path")
 
 
 def video_parameters(graph, decl):
