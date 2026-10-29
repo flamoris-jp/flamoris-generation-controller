@@ -1,3 +1,7 @@
+# flamoris-generation-controller 1.3.0
+
+Add an optional bounded silent MiniMax H3 I2V/FLF2V profile with declaration version 3, explicit 17k+5 frames at 24 FPS, one native sampling path and native VAEDecode. Preserve Wan definitions, shared job/input authority, verified MP4 delivery and unknown/no-replay. Operator-installed models, reviewed node policy and real GPU qualification remain separate. See [H3](../docs/MINIMAX_H3.md).
+
 # flamoris-generation-controller 1.2.1
 
 Fix native SaveVideo V3 registration observed in the operator preflight. Accept only installed MP4/H.264 branches using constant flat API keys `format` and `format.codec`; reject additional dynamic inputs and preserve legacy graph identities. Managed inputs, job authority, output verification and unknown/no-replay remain unchanged. Native metadata and synthetic transport tests do not prove AnimeGen GPU success. See [video contract](../docs/VIDEO.md).

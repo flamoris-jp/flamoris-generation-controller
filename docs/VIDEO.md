@@ -1,5 +1,8 @@
 # Wan / AnimeGen video through Controller
 
+The optional [MiniMax H3 silent-video profile](MINIMAX_H3.md) uses declaration
+version 3 and its own frame grid. The Wan version-2 contract below is retained.
+
 Owner: [Controller #31](https://github.com/flamoris-jp/flamoris-generation-controller/issues/31),
 resumed from [Generation #25](https://github.com/flamoris-jp/flamoris-generation-mcp/issues/25).
 **1.2.1 adds installed native SaveVideo V3 compatibility; real GPU acceptance pending.**

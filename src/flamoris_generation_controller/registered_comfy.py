@@ -199,6 +199,7 @@ class ComfyDefinitions:
 
         name, _graph, defaults, reference = self.get(definition_id)
         from .declared_comfy import Declaration
+        from .video import video_profile
 
         if isinstance(defaults, Declaration):
             parameters = {}
@@ -221,7 +222,7 @@ class ComfyDefinitions:
                 "provider_id": "comfyui",
                 "capability_id": "video.generate" if video else "image.generate",
                 **(
-                    {"video": {"profile": "wan-video-v1", **video.model_dump()}}
+                    {"video": {"profile": video_profile(defaults), **video.model_dump()}}
                     if video
                     else {
                         "image": {

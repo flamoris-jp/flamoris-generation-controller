@@ -1,5 +1,13 @@
 # Contributor and AI-agent instructions
 
+## 2026-10-29 MiniMax H3
+
+The user requests an H3 comparison and matching Studio integration after supplied
+installed-node inspection. Follow docs/MINIMAX_H3.md. Add bounded silent H3 I2V
+and FLF2V without changing Wan identities, operator policy, shared authority or
+unknown/no-replay. Model download, installed readiness and actual inference are
+separate evidence. Source/PR work is authorized; merges remain separately scoped.
+
 ## 2026-10-28 Controller #31
 
 The user explicitly resumes AnimeGen/Wan video integration and short-clip testing. Follow docs/VIDEO.md. Source/test/doc/PR work and the requested live test supersede prior feature holds for this slice. Obtain actual exported production graphs and installed contracts; do not fabricate a validated graph or bypass operator policy. Preserve single authority, managed inputs, scoped cancellation and unknown/no-replay. No merge is requested.

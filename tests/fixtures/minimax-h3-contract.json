@@ -1,0 +1,754 @@
+{
+  "registration": {
+    "name": "Synthetic H3 silent video",
+    "graph": {
+      "1": {
+        "class_type": "UNETLoader",
+        "inputs": {
+          "unet_name": "fixture.safetensors",
+          "weight_dtype": "default"
+        }
+      },
+      "2": {
+        "class_type": "CLIPLoader",
+        "inputs": {
+          "clip_name": "fixture.safetensors",
+          "type": "minimax",
+          "device": "default"
+        }
+      },
+      "3": {
+        "class_type": "VAELoader",
+        "inputs": {
+          "vae_name": "fixture.safetensors"
+        }
+      },
+      "4": {
+        "class_type": "LoadImage",
+        "inputs": {
+          "image": "$start_image"
+        }
+      },
+      "5": {
+        "class_type": "MiniMaxH3ImageToVideo",
+        "inputs": {
+          "clip": [
+            "2",
+            0
+          ],
+          "vae": [
+            "3",
+            0
+          ],
+          "prompt": "A quiet pause.",
+          "width": 64,
+          "height": 64,
+          "length": 22,
+          "first_frame": [
+            "4",
+            0
+          ]
+        }
+      },
+      "6": {
+        "class_type": "RandomNoise",
+        "inputs": {
+          "noise_seed": 42
+        }
+      },
+      "7": {
+        "class_type": "BasicGuider",
+        "inputs": {
+          "model": [
+            "1",
+            0
+          ],
+          "conditioning": [
+            "5",
+            0
+          ]
+        }
+      },
+      "8": {
+        "class_type": "KSamplerSelect",
+        "inputs": {
+          "sampler_name": "euler"
+        }
+      },
+      "9": {
+        "class_type": "BasicScheduler",
+        "inputs": {
+          "model": [
+            "1",
+            0
+          ],
+          "scheduler": "simple",
+          "steps": 20,
+          "denoise": 1.0
+        }
+      },
+      "10": {
+        "class_type": "SamplerCustomAdvanced",
+        "inputs": {
+          "noise": [
+            "6",
+            0
+          ],
+          "guider": [
+            "7",
+            0
+          ],
+          "sampler": [
+            "8",
+            0
+          ],
+          "sigmas": [
+            "9",
+            0
+          ],
+          "latent_image": [
+            "5",
+            1
+          ]
+        }
+      },
+      "11": {
+        "class_type": "VAEDecode",
+        "inputs": {
+          "samples": [
+            "10",
+            0
+          ],
+          "vae": [
+            "3",
+            0
+          ]
+        }
+      },
+      "12": {
+        "class_type": "CreateVideo",
+        "inputs": {
+          "images": [
+            "11",
+            0
+          ],
+          "fps": 24
+        }
+      },
+      "13": {
+        "class_type": "SaveVideo",
+        "inputs": {
+          "video": [
+            "12",
+            0
+          ],
+          "filename_prefix": "flamoris",
+          "format": "mp4",
+          "format.codec": "h264"
+        }
+      }
+    },
+    "declaration": {
+      "version": 3,
+      "video": {
+        "mode": "i2v",
+        "conditioning_node": "5"
+      },
+      "parameters": {
+        "start_image": {
+          "type": "string",
+          "role": "managed_input",
+          "label": "Start image",
+          "required": true,
+          "targets": [
+            {
+              "node": "4",
+              "input": "image"
+            }
+          ]
+        },
+        "model": {
+          "type": "string",
+          "role": "model",
+          "label": "model",
+          "default": "fixture.safetensors",
+          "targets": [
+            {
+              "node": "1",
+              "input": "unet_name"
+            }
+          ],
+          "model_kind": "diffusion_model",
+          "enum": [
+            "fixture.safetensors"
+          ]
+        },
+        "encoder": {
+          "type": "string",
+          "role": "model",
+          "label": "encoder",
+          "default": "fixture.safetensors",
+          "targets": [
+            {
+              "node": "2",
+              "input": "clip_name"
+            }
+          ],
+          "model_kind": "text_encoder",
+          "enum": [
+            "fixture.safetensors"
+          ]
+        },
+        "vae": {
+          "type": "string",
+          "role": "model",
+          "label": "vae",
+          "default": "fixture.safetensors",
+          "targets": [
+            {
+              "node": "3",
+              "input": "vae_name"
+            }
+          ],
+          "model_kind": "vae",
+          "enum": [
+            "fixture.safetensors"
+          ]
+        },
+        "motion": {
+          "type": "string",
+          "role": "prompt",
+          "label": "motion",
+          "default": "A quiet pause.",
+          "targets": [
+            {
+              "node": "5",
+              "input": "prompt"
+            }
+          ]
+        },
+        "width": {
+          "type": "integer",
+          "role": "parameter",
+          "label": "width",
+          "default": 64,
+          "targets": [
+            {
+              "node": "5",
+              "input": "width"
+            }
+          ],
+          "minimum": 64,
+          "maximum": 1024
+        },
+        "height": {
+          "type": "integer",
+          "role": "parameter",
+          "label": "height",
+          "default": 64,
+          "targets": [
+            {
+              "node": "5",
+              "input": "height"
+            }
+          ],
+          "minimum": 64,
+          "maximum": 1024
+        },
+        "frames": {
+          "type": "integer",
+          "role": "parameter",
+          "label": "frames",
+          "default": 22,
+          "targets": [
+            {
+              "node": "5",
+              "input": "length"
+            }
+          ],
+          "minimum": 5,
+          "maximum": 161
+        },
+        "fps": {
+          "type": "integer",
+          "role": "parameter",
+          "label": "fps",
+          "default": 24,
+          "targets": [
+            {
+              "node": "12",
+              "input": "fps"
+            }
+          ],
+          "minimum": 24,
+          "maximum": 24
+        },
+        "seed": {
+          "type": "integer",
+          "role": "parameter",
+          "label": "seed",
+          "default": 42,
+          "targets": [
+            {
+              "node": "6",
+              "input": "noise_seed"
+            }
+          ],
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "steps": {
+          "type": "integer",
+          "role": "parameter",
+          "label": "steps",
+          "default": 20,
+          "targets": [
+            {
+              "node": "9",
+              "input": "steps"
+            }
+          ],
+          "minimum": 1,
+          "maximum": 50
+        }
+      },
+      "constants": [
+        {
+          "node": "1",
+          "input": "weight_dtype"
+        },
+        {
+          "node": "2",
+          "input": "type"
+        },
+        {
+          "node": "2",
+          "input": "device"
+        },
+        {
+          "node": "8",
+          "input": "sampler_name"
+        },
+        {
+          "node": "9",
+          "input": "scheduler"
+        },
+        {
+          "node": "9",
+          "input": "denoise"
+        },
+        {
+          "node": "13",
+          "input": "format"
+        },
+        {
+          "node": "13",
+          "input": "format.codec"
+        }
+      ],
+      "output": {
+        "node": "13"
+      }
+    }
+  },
+  "object_info": {
+    "CreateVideo": {
+      "input": {
+        "required": {
+          "images": [
+            "IMAGE",
+            {
+              "tooltip": "The images to create a video from."
+            }
+          ],
+          "fps": [
+            "FLOAT",
+            {
+              "default": 30.0,
+              "min": 1.0,
+              "max": 120.0,
+              "step": 1.0
+            }
+          ]
+        },
+        "optional": {
+          "audio": [
+            "AUDIO",
+            {
+              "tooltip": "The audio to add to the video."
+            }
+          ],
+          "bit_depth": [
+            "COMBO",
+            {
+              "tooltip": "Auto uses 8-bit for sRGB and 10-bit for HDR. Explicit 8-bit and 10-bit choices are independent of colorspace.",
+              "default": "auto",
+              "multiselect": false,
+              "options": [
+                "auto",
+                8,
+                10
+              ]
+            }
+          ],
+          "color_space": [
+            "COMBO",
+            {
+              "tooltip": "Colorspace of the input images. HDR selects BT.2020/HLG and HDR PQ selects BT.2020/PQ.",
+              "default": "sRGB",
+              "multiselect": false,
+              "options": [
+                "sRGB",
+                "HDR",
+                "HDR PQ"
+              ]
+            }
+          ],
+          "codec": [
+            "COMBO",
+            {
+              "tooltip": "Optionally encode the video immediately. None keeps the images in tensor form; Auto uses H.264.",
+              "advanced": true,
+              "default": "none",
+              "multiselect": false,
+              "options": [
+                "none",
+                "auto",
+                "h264",
+                "av1"
+              ]
+            }
+          ]
+        }
+      },
+      "output": [
+        "VIDEO"
+      ],
+      "output_node": false
+    },
+    "UNETLoader": {
+      "input": {
+        "required": {
+          "unet_name": [
+            [
+              "fixture.safetensors"
+            ]
+          ],
+          "weight_dtype": [
+            [
+              "default"
+            ]
+          ]
+        }
+      },
+      "output": [
+        "MODEL"
+      ],
+      "output_node": false
+    },
+    "BasicGuider": {
+      "input": {
+        "required": {
+          "model": [
+            "MODEL",
+            {}
+          ],
+          "conditioning": [
+            "CONDITIONING",
+            {}
+          ]
+        }
+      },
+      "output": [
+        "GUIDER"
+      ],
+      "output_node": false
+    },
+    "VAEDecode": {
+      "input": {
+        "required": {
+          "samples": [
+            "LATENT",
+            {
+              "tooltip": "The latent to be decoded."
+            }
+          ],
+          "vae": [
+            "VAE",
+            {
+              "tooltip": "The VAE model used for decoding the latent."
+            }
+          ]
+        }
+      },
+      "output": [
+        "IMAGE"
+      ],
+      "output_node": false
+    },
+    "MiniMaxH3ImageToVideo": {
+      "input": {
+        "required": {
+          "clip": [
+            "CLIP",
+            {}
+          ],
+          "vae": [
+            "VAE",
+            {}
+          ],
+          "prompt": [
+            "STRING",
+            {
+              "multiline": true,
+              "dynamicPrompts": true
+            }
+          ],
+          "width": [
+            "INT",
+            {
+              "default": 1344,
+              "min": 32,
+              "max": 16384,
+              "step": 32
+            }
+          ],
+          "height": [
+            "INT",
+            {
+              "default": 768,
+              "min": 32,
+              "max": 16384,
+              "step": 32
+            }
+          ],
+          "length": [
+            "INT",
+            {
+              "tooltip": "Frame count at 24 fps, snapped up to the model's 17k+5 grid (124 = ~5s; trained range is ~124-362, longer is untested)",
+              "default": 124,
+              "min": 5,
+              "max": 3600,
+              "step": 17
+            }
+          ]
+        },
+        "optional": {
+          "first_frame": [
+            "IMAGE",
+            {}
+          ],
+          "last_frame": [
+            "IMAGE",
+            {}
+          ]
+        }
+      },
+      "output": [
+        "CONDITIONING",
+        "LATENT"
+      ],
+      "output_node": false
+    },
+    "BasicScheduler": {
+      "input": {
+        "required": {
+          "model": [
+            "MODEL",
+            {}
+          ],
+          "scheduler": [
+            [
+              "simple"
+            ]
+          ],
+          "steps": [
+            "INT",
+            {
+              "default": 20,
+              "min": 1,
+              "max": 10000
+            }
+          ],
+          "denoise": [
+            "FLOAT",
+            {
+              "default": 1.0,
+              "min": 0.0,
+              "max": 1.0,
+              "step": 0.01
+            }
+          ]
+        }
+      },
+      "output": [
+        "SIGMAS"
+      ],
+      "output_node": false
+    },
+    "LoadImage": {
+      "input": {
+        "required": {
+          "image": [
+            [
+              "fixture.png"
+            ]
+          ]
+        }
+      },
+      "output": [
+        "IMAGE",
+        "MASK"
+      ],
+      "output_node": false
+    },
+    "RandomNoise": {
+      "input": {
+        "required": {
+          "noise_seed": [
+            "INT",
+            {
+              "default": 0,
+              "min": 0,
+              "max": 18446744073709551615,
+              "control_after_generate": true
+            }
+          ]
+        }
+      },
+      "output": [
+        "NOISE"
+      ],
+      "output_node": false
+    },
+    "VAELoader": {
+      "input": {
+        "required": {
+          "vae_name": [
+            [
+              "fixture.safetensors"
+            ]
+          ]
+        }
+      },
+      "output": [
+        "VAE"
+      ],
+      "output_node": false
+    },
+    "SamplerCustomAdvanced": {
+      "input": {
+        "required": {
+          "noise": [
+            "NOISE",
+            {}
+          ],
+          "guider": [
+            "GUIDER",
+            {}
+          ],
+          "sampler": [
+            "SAMPLER",
+            {}
+          ],
+          "sigmas": [
+            "SIGMAS",
+            {}
+          ],
+          "latent_image": [
+            "LATENT",
+            {}
+          ]
+        }
+      },
+      "output": [
+        "LATENT",
+        "LATENT"
+      ],
+      "output_node": false
+    },
+    "KSamplerSelect": {
+      "input": {
+        "required": {
+          "sampler_name": [
+            [
+              "euler"
+            ]
+          ]
+        }
+      },
+      "output": [
+        "SAMPLER"
+      ],
+      "output_node": false
+    },
+    "CLIPLoader": {
+      "input": {
+        "required": {
+          "clip_name": [
+            [
+              "fixture.safetensors"
+            ]
+          ],
+          "type": [
+            [
+              "minimax"
+            ]
+          ]
+        },
+        "optional": {
+          "device": [
+            [
+              "default"
+            ]
+          ]
+        }
+      },
+      "output": [
+        "CLIP"
+      ],
+      "output_node": false
+    },
+    "SaveVideo": {
+      "input": {
+        "required": {
+          "video": [
+            "VIDEO"
+          ],
+          "filename_prefix": [
+            "STRING"
+          ],
+          "format": [
+            "COMFY_DYNAMICCOMBO_V3",
+            {
+              "options": [
+                {
+                  "key": "mp4",
+                  "inputs": {
+                    "required": {
+                      "codec": [
+                        "COMFY_DYNAMICCOMBO_V3",
+                        {
+                          "options": [
+                            {
+                              "key": "h264",
+                              "inputs": {}
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "output": [
+        "VIDEO"
+      ],
+      "output_node": true
+    }
+  }
+}
