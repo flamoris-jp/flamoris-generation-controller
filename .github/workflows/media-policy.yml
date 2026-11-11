@@ -1,0 +1,36 @@
+name: Media policy
+
+# Protect the stable repository-size boundary on PRs without duplicate main runs.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-tracked-media:
+    name: No tracked audio or video
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Reject tracked audio and video filenames
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          import sys
+          
+          extensions = {b".mp3", b".mp2", b".mp4", b".wav", b".wave", b".flac", b".aac", b".m4a", b".m4b", b".ogg", b".oga", b".ogv", b".opus", b".aif", b".aiff", b".aifc", b".wma", b".m4v", b".mov", b".webm", b".mkv", b".avi", b".mpeg", b".mpg", b".wmv", b".mts", b".m2ts", b".3gp", b".flv", b".vob", b".asf", b".ac3", b".amr", b".au", b".snd", b".caf", b".wv", b".pcm"}
+          paths = subprocess.check_output(["git", "ls-files", "-z"]).split(b"\0")
+          blocked = [path for path in paths if path and any(path.lower().endswith(ext) for ext in extensions)]
+          if blocked:
+              print("Audio/video files must be stored outside Git; commit references and hashes instead.")
+              for path in blocked:
+                  print(repr(path.decode("utf-8", errors="backslashreplace")))
+              sys.exit(1)
+          print("No tracked audio/video filenames found.")
+          PY
